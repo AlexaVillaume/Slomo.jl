@@ -1,5 +1,8 @@
 module Models
 
+include("constants.jl")
+include("integrate.jl")
+
 abstract type Model end
 
 abstract type DensityModel <: Model end
@@ -14,7 +17,6 @@ end
 """
 Create a new model from the specified parameters.
 """
-
 function update(model::Model, parameters::Dict{Symbol, Float64})
     args = []
     for kw in propertynames(model)
@@ -35,38 +37,38 @@ Functions for density models
 ===========================#
 
 """
-Local surface density at R.
-"""
-function surface_density(model::DensityModel, R::Array{Float64, 1})
-    error("Must be called on subtype of DensityModel with defined surface density")
-end
-
-surface_density(model::DensityModel, R::Float64) = begin
-    surface_density(model, collect([R]))
-end
-
-"""
 Local volume density at r.
 """
-function volume_density(model::DensityModel, r::Array{Float64, 1})
+function density(model::DensityModel, r)
     error("Must be called on subtype of DensityModel with defined volume density")
 end
 
-volume_density(model::DensityModel, r::Float64) = begin
-    volume_density(model, collect([r]))
+"""
+Local surface density at R.  If not defined for a subtype of DensityModel, then
+calculate numerically as the Abel transform from the volume density profile.
+"""
+function density2d(model::DensityModel, R)
+    integrand_abel(r) = density(model, r) * r / √(r ^ 2 - Ri ^ 2)
+    return 2 * [integrate(integrand_abel, Ri, Inf) for Ri in R]
 end
 
 """
-Enclosed mass within r.
+Enclosed mass within r.  If not defined for a subtype of DensityModel, then
+calculate numerically as the integral of the volume density.
 """
-function mass(model::DensityModel, r::Array{Float64, 1})
-    error("Must be called on subtype of DensityModel with defined mass")
+function mass(model::DensityModel, r)
+    integrand(r) = 4pi * r ^ 2 * density(model, r)
+    return integrate(integrand, 0.0, r)
 end
 
-mass(model::DensityModel, r::Float64) = begin
-    mass(model, collect([r]))
+"""
+Gravitational potential at r.  Equal to the square of the circular velocity.
+If not defined for a subtype of DensityModel, then calculate from the enclosed
+mass.
+"""
+function potential(model::DensityModel)
+    return -G * mass(model, r) ./ r
 end
-
 
 #==============================
 Functions for anisotropy models
@@ -76,32 +78,24 @@ Functions for anisotropy models
 Velocity anisotropy (beta) as a function of radius.  The velocity anisotropy is
 defined as 1 - sigma_tan^2 / sigma_rad^2.
 """
-function beta(model::AnisotropyModel, r::Array{Float64, 1})
+function beta(model::AnisotropyModel, r)
     error("Must be called on subtype of AnisotropyModel with defined beta profile")
 end
 
-beta(model::AnisotropyModel, r::Float64) = beta(model, collect([r]))
+beta(model::AnisotropyModel, r::Float64)::Float64 = beta(model, collect([r]))[1]
 
 """
 Projection kernel for an anisotropy model.
 """
-function K_jeans(model::AnisotropyModel,
-                 r::Array{Float64, 1},
-                 R::Array{Float64, 1})
-    error("Must be called on subtype of AnisotropyModel with defined beta profile")
-end
-
-K_jeans(model::AnisotropyModel, r::Float64, R::Float64) = begin
-    return K_jeans(model, collect([r]), collect([R]))
+function K_jeans(model::AnisotropyModel, r, R)
+    error("Must be called on subtype of AnisotropyModel with defined Jeans kernel")
 end
 
 """
 Integrating factor when solving for sigma_rad^2
 """
-function g_jeans(model::AnisotropyModel, r::Array{Float64, 1})
-    error("Must be called on subtype of AnisotropyModel with defined ")
+function g_jeans(model::AnisotropyModel, r)
+    exp.(2 * integrate(x -> beta(model, x) / x, 1.0, r))
 end
-
-g_jeans(model::AnisotropyModel, r::Float64) = g_jeans(model, collect([r]))
 
 end
