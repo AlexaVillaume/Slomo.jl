@@ -19,12 +19,15 @@ function integrate(f, a::Float64, b::Array{Float64, 1})::Array{Float64, 1}
 end
 
 function integrate(f, a::Array{Float64, 1}, b::Float64)::Array{Float64, 1}
-    integral = zero(a)
-    for (i, ai) in enumerate(a)
-        prob = ODEProblem((u, p, t) -> f(t), f(ai), (ai, b))
-        sol = solve(prob, alg)
-        integral[i] = sol[end]
-    end
+    # First integrate over the widest range (from the minimum lower bound)
+    amin = minimum(a)
+    prob = ODEProblem((u, p, t) -> f(t), f(amin), (amin, b))
+    ymin = solve(prob, alg)[1]
+    # Then subtract the integral from the minimum lower bound up
+    amax = maximum(a)
+    prob = ODEProblem((u, p, t) -> f(t), f(amin), (amin, amax))
+    sol = solve(prob, alg)
+    return ymin - sol(a)
 end
     
 
