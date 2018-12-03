@@ -82,20 +82,18 @@ function beta(model::AnisotropyModel, r)
     error("Must be called on subtype of AnisotropyModel with defined beta profile")
 end
 
-beta(model::AnisotropyModel, r::Float64)::Float64 = beta(model, collect([r]))[1]
+"""
+Integrating factor when solving for sigma_rad^2
+"""
+function g_jeans(model::AnisotropyModel, r)
+    exp.(2 * integrate(x -> beta(model, x) / x, 1.0, r))
+end
 
 """
 Projection kernel for an anisotropy model.
 """
 function K_jeans(model::AnisotropyModel, r, R)
     error("Must be called on subtype of AnisotropyModel with defined Jeans kernel")
-end
-
-"""
-Integrating factor when solving for sigma_rad^2
-"""
-function g_jeans(model::AnisotropyModel, r)
-    exp.(2 * integrate(x -> beta(model, x) / x, 1.0, r))
 end
 
 end
