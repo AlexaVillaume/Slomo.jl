@@ -17,13 +17,13 @@ Isotropic model
 
 struct IsotropicModel <: AnisotropyModel end
 
-beta(model::IsotropicModel, r) = zero(r)
+beta(model::IsotropicModel, r) = zeros(size(r))
 
 K_jeans(model::IsotropicModel, r, R) = begin
     @. sqrt(1.0 - 1.0 / (r / R) ^ 2)
 end
 
-g_jeans(model::IsotropicModel, r) = one(r)
+g_jeans(model::IsotropicModel, r) = ones(size(r))
 
 #==================
 Constant beta model
@@ -32,8 +32,9 @@ Constant beta model
 struct ConstantBetaModel <: AnisotropyModel
     beta::Float64
 end
+ConstantBetaModel() = ConstantBetaModel(0.01)
 
-beta(model::ConstantBetaModel, r) = model.beta .* ones(r)
+beta(model::ConstantBetaModel, r) = model.beta .* ones(size(r))
 
 g_jeans(model::ConstantBetaModel, r) = r .^ (2 * model.beta)
 

@@ -48,8 +48,7 @@ Local surface density at R.  If not defined for a subtype of DensityModel, then
 calculate numerically as the Abel transform from the volume density profile.
 """
 function density2d(model::DensityModel, R)
-    integrand_abel(r) = density(model, r) * r / √(r ^ 2 - Ri ^ 2)
-    return 2 * [integrate(integrand_abel, Ri, Inf) for Ri in R]
+    error("need to implement abel transform")
 end
 
 """
@@ -57,8 +56,8 @@ Enclosed mass within r.  If not defined for a subtype of DensityModel, then
 calculate numerically as the integral of the volume density.
 """
 function mass(model::DensityModel, r)
-    integrand(r) = 4pi * r ^ 2 * density(model, r)
-    return integrate(integrand, 0.0, r)
+    integrand(x) = 4pi * x ^ 2 * density(model, x)
+    return integrate(integrand, eps() ^ (1/3), r)
 end
 
 """
@@ -86,7 +85,7 @@ end
 Integrating factor when solving for sigma_rad^2
 """
 function g_jeans(model::AnisotropyModel, r)
-    exp.(2 * integrate(x -> beta(model, x) / x, 1.0, r))
+    exp.(2.0 * integrate(x -> beta(model, x) / x, 1.0, r))
 end
 
 """
