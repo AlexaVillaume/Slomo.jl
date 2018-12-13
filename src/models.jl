@@ -1,7 +1,9 @@
 module Models
 
-include("constants.jl")
-include("integrate.jl")
+using Slomo.Constants: G, rmax
+using Slomo.Integrate: solve, integrate
+
+struct NotImplemented <: Exception end
 
 abstract type Model end
 
@@ -9,7 +11,8 @@ abstract type DensityModel <: Model end
 
 abstract type AnisotropyModel <: Model end
 
-struct Tracer
+struct JeansModel <: Model
+    mass_model::DensityModel
     density_model::DensityModel
     anisotropy_model::AnisotropyModel
 end
@@ -27,10 +30,21 @@ function update(model::Model, parameters::Dict{Symbol, Float64})
     return typeof(model)(args...)
 end
 
-update(tracer::Tracer, parameters::Dict{Symbol, Float64}) = begin
-    Tracer(update(tracer.density_model, parameters),
-           update(tracer.anisotropy_model, parameters))
+update(model::JeansModel, parameters::Dict{Symbol, Float64}) = begin
+    JeansModel(update(mass_model, parameters),
+               update(density_model, parameters),
+               update(anisotropy_model, parameters))
 end
+
+"""
+Check to see if there is an analytic profile defined for a subtype,
+ or if it needs to be numerically integrated.
+"""
+function has_analytic_profile(f, model::Model)
+    method = methods(f, (typeof(model), Vararg)).ms[1]
+    return occursin(string(typeof(model)), string(method))
+end
+
 
 #===========================
 Functions for density models
@@ -40,7 +54,7 @@ Functions for density models
 Local volume density at r.
 """
 function density(model::DensityModel, r)
-    error("Must be called on subtype of DensityModel with defined volume density")
+    throw(NotImplemented("no defined density profile"))
 end
 
 """
@@ -48,7 +62,8 @@ Local surface density at R.  If not defined for a subtype of DensityModel, then
 calculate numerically as the Abel transform from the volume density profile.
 """
 function density2d(model::DensityModel, R)
-    error("need to implement abel transform")
+    integrand(r) = density(model, r) * r / √(r ^ 2 - R ^ 2)
+    return 2 * integrate(integrand, R, rmax)
 end
 
 """
@@ -78,7 +93,7 @@ Velocity anisotropy (beta) as a function of radius.  The velocity anisotropy is
 defined as 1 - sigma_tan^2 / sigma_rad^2.
 """
 function beta(model::AnisotropyModel, r)
-    error("Must be called on subtype of AnisotropyModel with defined beta profile")
+    throw(NotImplemented("no defined beta profile"))
 end
 
 """
@@ -92,7 +107,7 @@ end
 Projection kernel for an anisotropy model.
 """
 function K_jeans(model::AnisotropyModel, r, R)
-    error("Must be called on subtype of AnisotropyModel with defined Jeans kernel")
+    throw(NotImplemented("no defined Jeans Kernel"))
 end
 
 end

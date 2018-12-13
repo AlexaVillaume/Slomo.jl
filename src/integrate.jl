@@ -1,3 +1,5 @@
+module Integrate
+
 import OrdinaryDiffEq: solve
 using OrdinaryDiffEq: ODEProblem, Tsit5
 
@@ -17,4 +19,6 @@ end
 function integrate(f, a::Float64, b::Array{Float64, 1})::Array{Float64, 1}
     bmax = maximum(b)
     return solve(f, a, bmax; saveat = b).u
+end
+
 end
