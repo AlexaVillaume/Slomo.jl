@@ -12,10 +12,16 @@ abstract type DensityModel <: Model end
 abstract type AnisotropyModel <: Model end
 
 struct JeansModel <: Model
-    mass_model::DensityModel
+    mass_model::Array{DensityModel, 1}
     density_model::DensityModel
     anisotropy_model::AnisotropyModel
 end
+
+JeansModel(mass_model::DensityModel,
+           density_model::DensityModel,
+           anisotropy_model::AnisotropyModel) = begin
+               JeansModel([mass_model], density_model, anisotropy_model)
+           end
 
 """
 Create a new model from the specified parameters.
@@ -32,6 +38,10 @@ function update(model::Model, parameters::Dict{Symbol, Float64})
     return typeof(model)(args...)
 end
 
+update(model::Array{T} where T<:Model, parameters::Dict{Symbol, Float64}) = begin
+    [update(m, parameters) for m in model]
+end
+
 update(model::JeansModel, parameters::Dict{Symbol, Float64}) = begin
     JeansModel(update(model.mass_model, parameters),
                update(model.density_model, parameters),
@@ -39,8 +49,8 @@ update(model::JeansModel, parameters::Dict{Symbol, Float64}) = begin
 end
 
 """
-Check to see if there is an analytic profile defined for a subtype,
- or if it needs to be numerically integrated.
+Stupid hack to see if there is an analytic profile defined for a subtype
+or if it needs to be numerically integrated.
 """
 function has_analytic_profile(f, model::Model)
     method = methods(f, (typeof(model), Vararg)).ms[1]
@@ -76,6 +86,8 @@ function mass(model::DensityModel, r)
     integrand(x) = 4pi * x ^ 2 * density(model, x)
     return integrate(integrand, eps() ^ (1/3), r)
 end
+
+mass(model::Array{T} where T<:DensityModel, r) = sum([mass(m, r) for m in model])
 
 """
 Gravitational potential at r.  Equal to the square of the circular velocity.

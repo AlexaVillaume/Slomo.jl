@@ -30,9 +30,9 @@ function sigma_los(model::JeansModel, R;
 
     # check for analytic functions
     has_kernel = has_analytic_profile(K_jeans, anisotropy_model)
-    has_g = has_analytic_profile(g_jeans, anisotropy_model)
-    has_mass = has_analytic_profile(mass, mass_model)
-    has_sd = has_analytic_profile(density2d, density_model)
+    # has_g = has_analytic_profile(g_jeans, anisotropy_model)
+    # has_mass = has_analytic_profile(mass, mass_model)
+    # has_sd = has_analytic_profile(density2d, density_model)
 
     # set up interpolation grid
     Rmin = minimum(R)

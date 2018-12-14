@@ -1,4 +1,5 @@
-using GSL: sf_gamma
+using SpecialFunctions: gamma
+using StatsFuns: gammacdf
 
 import Slomo.Models: DensityModel, mass, density, density2d
 
@@ -23,43 +24,47 @@ end
 """
 Surface density for Sersic model.
 
-    R : radii in kpc
+    R : projected (2d) radii in kpc
     Re : effective radius in kpc
     n : index
+    Mtot : total mass
 """
-function s_sersic(R, Re::Float64, n::Float64)
+function s_sersic(R, Re::Float64, n::Float64, Mtot::Float64)
     bn = b_cb(n)
-    s0 = bn ^ (2 * n) / (2pi * n * Re ^ 2 * sf_gamma(2 * n))
+    s0 = Mtot * bn ^ (2 * n) / (2pi * n * Re ^ 2 * gamma(2 * n))
     return s0 * @. exp(-bn * (R / Re) ^ (1.0 / n))
 end
 
 """
 Volume density for Sersic model.
 
-    r : radii in kpc
+    r : deprojected (3d) radii in kpc
     Re : effective radius in kpc
     n : index
+    Mtot : total mass
 """
-function rho_sersic(r, Re::Float64, n::Float64)
+function rho_sersic(r, Re::Float64, n::Float64, Mtot::Float64)
     bn = b_cb(n)
     pn = p_ln(n)
     x = r / Re
-    rho0 = bn ^ (3 * n) / (4pi * n * Re ^ 3 * sf_gamma((3 - pn) * n))
+    rho0 = Mtot * bn ^ (3 * n) / (4pi * n * Re ^ 3 * gamma((3 - pn) * n))
     return rho0 * (@. (bn ^ n * x) ^ (-pn) * exp(-bn * x ^ (1.0 / n)))
 end
 
 """
 Mass enclosed within deprojected radius for the Sersic model.
 
-    r : radii in kpc
+    r : deprojected (3d) radii in kpc
     Re : effective radius in kpc
     n : index
-    M : total mass
+    Mtot : total mass
 """
-function M_sersic(r, Re, n::Float64, Mtot::Float64)
+function M_sersic(r, Re::Float64, n::Float64, Mtot::Float64)
     pn = p_ln(n)
     bn = b_cb(n)
-    return Mtot * @. sf_gamma_inc((3 - pn) * n, bn * (r / Re) ^ (1.0 / n))
+    alpha = (3 - pn) * n
+    x = @. bn * (r / Re) ^ (1.0 / n)
+    return @. Mtot * gammacdf(alpha, 1.0, x)
 end
 
 struct SersicModel <: DensityModel
@@ -72,11 +77,11 @@ SersicModel(Re, n) = SersicModel(Re, n, 1.0)
 SersicModel() = SersicModel(10.0, 4.0)
 
 function density2d(model::SersicModel, R)
-    return s_sersic(R, model.Re, model.n)
+    return s_sersic(R, model.Re, model.n, model.Mtot)
 end
 
 function density(model::SersicModel, r)
-    return rho_sersic(r, model.Re, model.n)
+    return rho_sersic(r, model.Re, model.n, model.Mtot)
 end
 
 function mass(model::SersicModel, r)
