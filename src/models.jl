@@ -23,17 +23,19 @@ Create a new model from the specified parameters.
 function update(model::Model, parameters::Dict{Symbol, Float64})
     args = []
     for kw in propertynames(model)
-        try
+        if kw in keys(parameters)
             push!(args, parameters[kw])
-        catch KeyError end
+        else
+            push!(args, getproperty(model, kw))
+        end
     end
     return typeof(model)(args...)
 end
 
 update(model::JeansModel, parameters::Dict{Symbol, Float64}) = begin
-    JeansModel(update(mass_model, parameters),
-               update(density_model, parameters),
-               update(anisotropy_model, parameters))
+    JeansModel(update(model.mass_model, parameters),
+               update(model.density_model, parameters),
+               update(model.anisotropy_model, parameters))
 end
 
 """
