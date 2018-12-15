@@ -1,3 +1,10 @@
+"""
+Basic types and methods.
+
+    DensityModel : parameterized density model
+    AnisotropyModel : parameterized orbital anisotropy model
+    JeansModel : collection of mass model, tracer density model, and anisotropy model
+"""
 module Models
 
 using Slomo.Constants: G, rmax
