@@ -31,7 +31,7 @@ Surface density for Sersic model.
 """
 function s_sersic(R, Re::Float64, n::Float64, Mtot::Float64)
     bn = b_cb(n)
-    s0 = Mtot * bn ^ (2 * n) / (2pi * n * Re ^ 2 * gamma(2 * n))
+    s0 = Mtot * bn ^ (2 * n) / (2π * n * Re ^ 2 * gamma(2 * n))
     return s0 * @. exp(-bn * (R / Re) ^ (1.0 / n))
 end
 
@@ -47,7 +47,7 @@ function rho_sersic(r, Re::Float64, n::Float64, Mtot::Float64)
     bn = b_cb(n)
     pn = p_ln(n)
     x = r / Re
-    rho0 = Mtot * bn ^ (3 * n) / (4pi * n * Re ^ 3 * gamma((3 - pn) * n))
+    rho0 = Mtot * bn ^ (3 * n) / (4π * n * Re ^ 3 * gamma((3 - pn) * n))
     return rho0 * (@. (bn ^ n * x) ^ (-pn) * exp(-bn * x ^ (1.0 / n)))
 end
 

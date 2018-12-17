@@ -90,7 +90,7 @@ Enclosed mass within r.  If not defined for a subtype of DensityModel, then
 calculate numerically as the integral of the volume density.
 """
 function mass(model::DensityModel, r)
-    integrand(x) = 4pi * x ^ 2 * density(model, x)
+    integrand(x) = 4π * x ^ 2 * density(model, x)
     return integrate(integrand, eps() ^ (1/3), r)
 end
 
