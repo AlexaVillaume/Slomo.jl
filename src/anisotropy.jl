@@ -32,7 +32,7 @@ Constant beta model
 struct ConstantBetaModel <: AnisotropyModel
     beta::Float64
 end
-ConstantBetaModel() = ConstantBetaModel(0.01)
+ConstantBetaModel() = ConstantBetaModel(0.0)
 
 beta(model::ConstantBetaModel, r) = model.beta .* ones(size(r))
 
@@ -42,6 +42,10 @@ K_jeans(model::ConstantBetaModel, r, R) = begin
     F = sf_hyperg_2F1
     Γ = gamma
     β = model.beta
+    # nudge half-integral beta
+    if 2.0 * β - floor(2.0 * β) == 0.0
+        β = β + eps()
+    end
     u = r ./ R
     um2 = u .^ -2.0
     term1 = (1.5 - β) * √(π) * Γ(β - 0.5) / Γ(β)
