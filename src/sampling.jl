@@ -16,7 +16,7 @@ module Sampling
 
 using Distributed: pmap
 
-const allowed_blob_type = Union{T, Array{T, N} where N} where T<:Union{Real, AbstractString}
+const allowed_blob_type = Union{T, Array{T}} where T<:Union{Real, AbstractString}
 
 """
 Allow parameter arrays (nwalkers, ndim) to be passed in as an array of parameter
@@ -49,13 +49,14 @@ function compute_lp(logp, x::Array{Float64, 2}; kwargs...)
     # deal with possible blobs
     if length(res[1]) > 1
         lp = [res[i][1] for i in 1:nwalkers]
-        nblobs = length(res[1]) - 1
         @assert(length(res[1]) <= 2,
                 "logp should have at most two returns; the log probability and a dictionary of blobs")
         # blobs is (nwalker,)-shaped array of blob dictionaries
         blobs = Array{Dict{AbstractString, allowed_blob_type}, 1}(undef, nwalkers)
         for k in 1:nwalkers
-            blobs[k] = res[k][2]
+            if res[k][2] != nothing
+                blobs[k] = res[k][2]
+            end
         end
     else
         lp = res

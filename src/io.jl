@@ -149,30 +149,36 @@ function read_last_state(hdf5_file)
         nsamples, nwalkers, ndim = size(file["chain"])
         x0 = reshape(file["chain"][nsamples, 1:nwalkers, 1:ndim], (nwalkers, ndim))
         lp0 = reshape(file["lp"][nsamples, 1:nwalkers], (nwalkers,))
+        accepted0 = reshape(file["accepted"][nsamples, 1:nwalkers], (nwalkers,))
         if "blobs" in names(file)
             blob_names = names(file["blobs"])
             blobs0 = Array{Dict{AbstractString, allowed_blob_type}, 1}(undef, nwalkers)
             for k in 1:nwalkers
-                blobs = Dict{AbstractString, allowed_blob_type}
+                blobs = Dict{AbstractString, allowed_blob_type}()
                 for name in blob_names
                     # fudge to list of indices for arbitrary sized array
                     idx = map(x -> isa(x, Int) ? x : (1:x.indices.stop),
-                              to_indices(file["blobs/$name"], (i, k, ..)))
-                    blobs[name] = file["blobs/$name"][idx...]
+                              to_indices(file["blobs/$name"], (nsamples, k, ..)))
+                    blob_size = [idx[i].stop for i in 3:length(idx)]
+                    blobs[name] = reshape(file["blobs/$name"][idx...], blob_size...)
                 end
                 blobs0[k] = blobs
             end
         else
             blobs0 = nothing
         end
+        return State(x0, lp0, accepted0, blobs0)
     end
-    return State(x0, lp0, accepted0, blobs0)
+
 end
 
 """
 Draw niter samples from logp and store them in hdf5_file.
 
     logp : log probability function: (params, kwargs...) -> float, blob_dict
+    niter : number of iterations
+    hdf5_file : output filename
+
 """
 function sample(logp, niter::Int, hdf5_file::AbstractString;
                 overwrite = false, append = false, x0 = nothing, gw_scale_a = 2.0,
@@ -185,7 +191,9 @@ function sample(logp, niter::Int, hdf5_file::AbstractString;
         if x0 != nothing
             @warn("ignoring the user-passed starting position in favor of the most recent sample")
         end
-        nsamples, nwalkers, ndim = size(f["chain"])
+        nsamples, nwalker, ndim = h5open(hdf5_file, "r") do file
+            size(file["chain"])
+        end
         state0 = read_last_state(hdf5_file)
         x0 = state0.x
         lp0 = state0.lp
