@@ -15,10 +15,8 @@ Samples can be saved to an HDF5 with the structure:
 module Sampling
 
 using Distributed: pmap
-using HDF5
-using EllipsisNotation
-using ProgressMeter: @showprogress
 
+const allowed_blob_type = Union{T, Array{T, N} where N} where T<:Union{Real, AbstractString}
 
 """
 Allow parameter arrays (nwalkers, ndim) to be passed in as an array of parameter
@@ -47,17 +45,17 @@ available workers with Distributed.pmap.
 """
 function compute_lp(logp, x::Array{Float64, 2}; kwargs...)
     nwalkers, ndim = size(x)
-    res = pmap(y -> logp(y, kwargs...), [x[i, :] for i in 1:nwalkers])
+    res = pmap(y -> logp(y; kwargs...), [x[i, :] for i in 1:nwalkers])
     # deal with possible blobs
     if length(res[1]) > 1
         lp = [res[i][1] for i in 1:nwalkers]
         nblobs = length(res[1]) - 1
-        # blobs is (nblobs, nwalker)-shaped array of blobs
-        blobs = Array{Any, 2}(undef, nblobs, nwalkers)
-        for i in 1:nblobs
-            for k in 1:nwalkers
-                blobs[i, k] = res[k][1 + i]
-            end
+        @assert(length(res[1]) <= 2,
+                "logp should have at most two returns; the log probability and a dictionary of blobs")
+        # blobs is (nwalker,)-shaped array of blob dictionaries
+        blobs = Array{Dict{AbstractString, allowed_blob_type}, 1}(undef, nwalkers)
+        for k in 1:nwalkers
+            blobs[k] = res[k][2]
         end
     else
         lp = res
@@ -74,7 +72,7 @@ probability function.
 
 Parameters
 
-    logp : function: (params, kwargs...) -> float, blobs...
+    logp : function: (params, kwargs...) -> float, blobs_dict
     x0 : walker positions, (nwalkers, ndim)-shaped array
     lp0 : log probability at x0, (nwalkers,)-shaped array,
         recalculate if not provided
@@ -87,7 +85,7 @@ Returns
     new_x : sample of shape (nwalkers, ndim)
     new_lp : log probability at x1, shape (nwalkers,)
     new_accepted : whether or not proposal was accepted, shape (nwalkers,)
-    new_blobs : additional returns from walkers, shape (nblobs, nwalkers, ..)
+    new_blobs : array (nwalkers,) of dictionaries, with additional returns from logp
 """
 function sample(logp, x0::Array{Float64, 2};
                 lp0 = nothing, blobs0 = nothing,
@@ -137,185 +135,14 @@ function sample(logp, x0::Array{Float64, 2};
                 new_x[j, :] = proposals[k, :]
                 new_lp[j] = lp[k]
                 if new_blobs != nothing
-                    for b in 1:size(new_blobs)[1]
-                        if length(size(blobs[b, k])) > 0
-                            # blob b is an array
-                            new_blobs[b, j][..] = blobs[b, k][..]
-                        else
-                            # blob b is a scalar
-                            new_blobs[b, j] = blobs[b, k]
-                        end
+                    for name in keys(new_blobs[1])
+                        new_blobs[j][name] = blobs[k][name]
                     end
                 end
             end
         end
     end
     return new_x, new_lp, new_accepted, new_blobs
-end
-
-function sample(logp, x0::Array, niter::Int;
-                gw_scale_a = 2.0, kwargs...)
-    x0 = convert_parameter_array(x0)
-    nwalkers, ndim = size(x0)
-    @assert nwalkers % 2 == 0 "Must have an even number of walkers!"
-    @assert nwalkers > 2 * ndim "Need at least 2 walkers per dimension!"
-
-    chain = NaN * ones((niter, nwalkers, ndim))
-    lp = NaN * ones((niter, nwalkers))
-    accepted = convert(Array{Int, 2}, zeros((niter, nwalkers)))
-    blobs = []
-    old_x = x0
-    old_lp, old_blobs = compute_lp(logp, x0)
-    @assert all(isfinite.(old_lp)) "One of the walkers returned an invalid probability!"
-    
-    @showprogress 1 "Sampling..." for i in 1:niter
-        new_x, new_lp, new_accepted, new_blobs = sample(logp, old_x;
-                                                        lp0 = old_lp,
-                                                        gw_scale_a = gw_scale_a,
-                                                        kwargs...)
-        chain[i, :, :] = new_x
-        lp[i, :] = new_lp
-        accepted[i, :] = convert(Array{Int, 1}, new_accepted)
-        append!(blobs, new_blobs)
-        # set previous result
-        old_x = new_x
-        old_lp = new_lp
-    end
-    return chain, lp, accepted, blobs
-end
-
-"""
-Draw niter samples from logp and store them in fname.
-
-If the file does not exist or overwrite = true, create a new hdf5 file.  Else
-if append = true, append samples to the file.
-
-If creating a new file, then the initial walker positions (x0) need to be set.
-
-If the log probability function has additional returns (aka "blobs"), then store
-these as specified by blob_scheme.  This should be an array of pairs  mapping names
-(as strings) to tuples of (Type, size) where size is a tuple of integers that 
-describe the size of the expected array in that blob.
-
-E.g., if logp returns (-1234.5, [1.0, π, 2.7], 42), then the blob scheme would be
-    
-    ```
-    blob_scheme = ["some_blob" => (Float64, (3,)), "more_blobs" => (Int, ())]
-    ```
-"""
-function sample(logp, niter::Int, fname::AbstractString;
-                overwrite = false, append = false,
-                x0 = nothing, blob_scheme = nothing,
-                gw_scale_a = 2.0, kwargs...)
-    
-    if isfile(fname) && !(overwrite || append)
-        throw("$fname exists, do you want to overwrite or append?")
-    elseif isfile(fname) && append
-        # get the starting positions
-        if x0 != nothing
-            @warn("ignoring the user-passed starting position in favor of the most recent sample")
-        end
-        # get chain size and last walker positions, last lp values
-        h5open(fname, "cw") do file
-            nsamples, nwalkers, ndim = size(file["chain"])
-            x0 = reshape(file["chain"][nsamples, 1:nwalkers, 1:ndim], (nwalkers, ndim))
-            lp0 = reshape(file["lp"][nsamples, 1:nwalkers], (nwalkers,))
-            if "blobs" in names(file)
-                nblobs = length(names(file["blobs"]))
-                blobs0 = Array{Any, 2}(undef, nblobs, nwalkers)
-                for (j, (name, (blob_type, blob_size))) in enumerate(blob_scheme)
-                    for k in 1:nwalkers
-                        idx = map(x -> isa(x, Int) ? x : (1:x.indices.stop),
-                                  to_indices(file["blobs/$name"], (nsamples, k, ..)))
-                        b = reshape(file["blobs/$name"][idx...], blob_size)
-                        if blob_size == ()
-                            blobs0[j, k] = b[1]
-                        else
-                            blobs0[j, k] = b
-                        end
-                    end
-                end
-            else
-                blobs0 = nothing
-            end
-        end
-    else
-        # either fname doesn't exist or we're overwriting it
-        @assert x0 != nothing "need to provide starting walker positions"
-        x0 = convert_parameter_array(x0)
-        lp0, blobs0 = compute_lp(logp, x0; kwargs...)
-        @assert all(isfinite.(lp0)) "initial positions returned non-finite numbers"
-        if blobs0 != nothing
-            @assert size(blobs0)[1] == length(blob_scheme) "blob scheme doesn't match output"
-        end
-        nwalkers, ndim = size(x0)
-        nsamples = 0
-        h5open(fname, "w") do file
-            dset = d_create(file, "chain", Float64,
-                            ((1, nwalkers, ndim), (-1, nwalkers, ndim)),
-                            "chunk", (1, nwalkers, ndim))
-            dset = d_create(file, "lp", Float64,
-                            ((1, nwalkers), (-1, nwalkers)),
-                            "chunk", (1, nwalkers))
-            dset = d_create(file, "accepted", Int,
-                            ((1, nwalkers), (-1, nwalkers)),
-                            "chunk", (1, nwalkers))
-            if blob_scheme != nothing
-                for (name, (blob_type, blob_size)) in blob_scheme
-                    dset = d_create(file, "blobs/$name", blob_type,
-                                    ((1, nwalkers, blob_size...), (-1, nwalkers, blob_size...)),
-                                    "chunk", (1, nwalkers, blob_size...))
-                end
-            end
-        end
-    end
-    
-    old_x = x0
-    old_lp = lp0
-    old_blobs = blobs0
-    @showprogress 1 "Sampling..." for i in (nsamples + 1):(nsamples + niter)
-        # draw sample
-        new_x, new_lp, new_accepted, new_blobs = sample(logp, old_x;
-                                                        lp0 = old_lp,
-                                                        blobs0 = old_blobs,
-                                                        gw_scale_a = gw_scale_a,
-                                                        kwargs...)
-        # save sample
-        h5open(fname, "r+") do file
-            
-            # expand arrays
-            set_dims!(file["chain"], (i, nwalkers, ndim))
-            set_dims!(file["lp"], (i, nwalkers))
-            set_dims!(file["accepted"], (i, nwalkers))
-            
-            # store chain, logp value, and accepted bits
-            file["chain"][i, :, :] = new_x
-            file["lp"][i, :] = new_lp
-            file["accepted"][i, :] = new_accepted
-            
-            if blob_scheme != nothing
-                for (j, (name, (blob_type, blob_size))) in enumerate(blob_scheme)
-                    if blob_size == ()
-                        # scalar blob
-                        set_dims!(file["blobs/$name"], (i, nwalkers))
-                        file["blobs/$name"][i, :] = new_blobs[j, :]
-                    else
-                        # array blob
-                        set_dims!(file["blobs/$name"], (i, nwalkers, blob_size...))
-                        for k in 1:nwalkers
-                            # fudge to list of indices for arbitrary sized array
-                            idx = map(x -> isa(x, Int) ? x : (1:x.indices.stop),
-                                      to_indices(file["blobs/$name"], (i, k, ..)))
-                            file["blobs/$name"][idx...] = new_blobs[j, k][..]
-                        end
-                    end
-                end
-            end
-            old_x = new_x
-            old_lp = new_lp
-            old_blobs = new_blobs
-        end
-    end     
 end
     
 end    
