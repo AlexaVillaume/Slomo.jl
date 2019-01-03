@@ -33,7 +33,7 @@ JeansModel(mass_model::DensityModel,
 """
 Create a new model from the specified parameters.
 """
-function update(model::Model, parameters::Dict{Symbol, Float64})
+function update(model::Model; parameters...)
     args = []
     for kw in propertynames(model)
         if kw in keys(parameters)
@@ -45,14 +45,14 @@ function update(model::Model, parameters::Dict{Symbol, Float64})
     return typeof(model)(args...)
 end
 
-update(model::Array{T} where T<:Model, parameters::Dict{Symbol, Float64}) = begin
-    [update(m, parameters) for m in model]
+update(model::Array{T} where T<:Model; parameters...) = begin
+    [update(m; parameters...) for m in model]
 end
 
-update(model::JeansModel, parameters::Dict{Symbol, Float64}) = begin
-    JeansModel(update(model.mass_model, parameters),
-               update(model.density_model, parameters),
-               update(model.anisotropy_model, parameters))
+update(model::JeansModel; parameters...) = begin
+    JeansModel(update(model.mass_model; parameters...),
+               update(model.density_model; parameters...),
+               update(model.anisotropy_model; parameters...))
 end
 
 """

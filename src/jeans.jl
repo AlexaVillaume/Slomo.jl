@@ -24,9 +24,8 @@ function sigma_los(model::JeansModel, R;
     set_error_handler_off()
     
     # update models with new parameters
-    p = Dict{Symbol, Float64}(key => value for (key, value) in parameters)
-    if length(keys(p)) > 0
-        model = update(model, p)
+    if length(keys(parameters)) > 0
+        model = update(model; parameters...)
     end
     mass_model = model.mass_model
     density_model = model.density_model
