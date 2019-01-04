@@ -1,15 +1,5 @@
-using GSL: sf_hyperg_2F1
-using SpecialFunctions: gamma
 import Slomo.Models: AnisotropyModel, beta, K_jeans, g_jeans
-
-"""
-Redefined incomplete beta function in terms of hypergeometric function 2F1.
-"""
-B_inc(a, b, z) = begin
-    F(z) = sf_hyperg_2F1(a, 1.0 - b, a + 1.0, z)
-    return @. a ^ -1.0  * z ^ a * F(z)
-end
-
+import Slomo.Utils: B_inc, gamma
 
 #==============
 Isotropic model
@@ -39,7 +29,6 @@ beta(model::ConstantBetaModel, r) = model.beta .* ones(size(r))
 g_jeans(model::ConstantBetaModel, r) = r .^ (2 * model.beta)
 
 K_jeans(model::ConstantBetaModel, r, R) = begin
-    F = sf_hyperg_2F1
     Γ = gamma
     β = model.beta
     # nudge half-integral beta
@@ -78,6 +67,8 @@ struct RSBetaModel <: AnisotropyModel
     ra::Float64
     nbeta::Float64
 end
+
+RSBetaModel() = RSBetaModel(0.0, 0.5, 10.0, 1.0)
 
 beta(model::RSBetaModel, r) = begin
     @. model.beta0 + (model.betaInf - model.beta0) / (1.0 + (model.ra / r) ^ model.nbeta)

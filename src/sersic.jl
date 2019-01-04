@@ -1,7 +1,5 @@
-using SpecialFunctions: gamma
-using StatsFuns: gammacdf
-
 import Slomo.Models: DensityModel, mass, density, density2d
+import Slomo.Utils: gamma, gamma_inc
 
 """
 'b' parameter in the Sersic function, from the Ciotti & Bertin (1999) approximation.
@@ -64,7 +62,7 @@ function M_sersic(r, Re::Float64, n::Float64, Mtot::Float64)
     bn = b_cb(n)
     alpha = (3 - pn) * n
     x = @. bn * (r / Re) ^ (1.0 / n)
-    return @. Mtot * gammacdf(alpha, 1.0, x)
+    return @. Mtot * gamma_inc(alpha, x)
 end
 
 struct SersicModel <: DensityModel

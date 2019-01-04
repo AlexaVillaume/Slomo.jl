@@ -1,5 +1,6 @@
 module Slomo
 
+include("utils.jl")
 include("constants.jl")
 include("cosmology.jl")
 include("integrate.jl")
