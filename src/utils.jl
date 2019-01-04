@@ -21,13 +21,19 @@ function gamma_inc(a, x)
     return gammacdf(a, 1, x)
 end
 
-
 """
 Redefined incomplete beta function in terms of hypergeometric function 2F1.
 """
 function B_inc(a, b, z)
     F(z) = hyp2f1(a, 1.0 - b, a + 1.0, z)
     return @. a ^ -1.0  * z ^ a * F(z)
+end
+
+"""
+Natural logarithm of a gaussian with mean μ and standard deviation σ.
+"""
+function log_gauss(x, mu, sigma)
+    return @. -0.5 * (log(2π * sigma^2) + ((x - mu) / sigma)^2)
 end
 
 end
