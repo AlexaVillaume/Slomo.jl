@@ -113,6 +113,8 @@ function concentration(Mvir; mdef = "200c", cosmo = default_cosmo, z = 0.0)
     return @. exp10(a + b * (log10(Mvir * h) - 12))
 end
 
-include("nfw.jl")
+include("halos/nfw.jl")
+include("halos/einasto.jl")
+include("halos/soliton.jl")
 
 end
