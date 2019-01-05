@@ -122,7 +122,8 @@ struct GNFWModel <: HaloModel
     gamma::Float64
 end
 
-GNFWModel() = GNFWModel(50.0, 1e7, 1.0)
+# default to 1e12 Mvir cusped halo
+GNFWModel() = GNFWModel(25.3, 3.7e6, 1.0)
 density(halo::GNFWModel, r) = rho_GNFW(r, halo.rs, halo.rhos, halo.gamma)
 mass(halo::GNFWModel, r) = M_GNFW(r, halo.rs, halo.rhos, halo.gamma)
 scale_radius(halo::GNFWModel) = halo.rs
@@ -157,7 +158,7 @@ struct CoreNFWModel <: HaloModel
     nc::Float64
 end
 
-CoreNFWModel(halo::NFWModel, rc::Float64, nc::Float64) = CoreNFWModel(halo.rs, halo.rhos, rc, nc)
+CoreNFWModel() = CoreNFWModel(25.3, 3.7e6, 12.5, 0.5)
 
 scale_radius(halo::CoreNFWModel) = halo.rs
 

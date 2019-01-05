@@ -1,5 +1,4 @@
 using Interpolations: LinearInterpolation
-using GSL: set_error_handler_off
 
 using Slomo.Models: update, JeansModel, NotImplemented, has_analytic_profile
 using Slomo.Models: mass, density, density2d, K_jeans, g_jeans, beta
@@ -20,9 +19,6 @@ function sigma_los(model::JeansModel, R;
                    n_interp::Int = 10, fudge = 1e-6,
                    parameters...)
 
-    # living dangerously... GSL will produce nan on bad input
-    set_error_handler_off()
-    
     # update models with new parameters
     if length(keys(parameters)) > 0
         model = update(model; parameters...)

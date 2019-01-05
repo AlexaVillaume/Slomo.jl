@@ -79,6 +79,9 @@ struct SolNFWModel <: HaloModel
     end
 end
 
+SolNFWModel() = SolNFWModel(21.1, 5.6e6, 0.53, 3.1e10, 0.48)
+
+
 density(halo::SolNFWModel, r::T where T <: Real) = begin
     if r < halo.repsilon
         return rho_sol(r, halo.rsol, halo.rhosol)
