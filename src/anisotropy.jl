@@ -50,11 +50,11 @@ Read & Steger model
 """
 Flexible velocity anisotropy model from Read & Steger 2017 (eq. 9)
 
-β(r) = β_0 + (β_inf - β_0) / (1 + (r_a / r)^n_β)
+β(r) = β_0 + (β_inf - β_0) / (1 + (r_β / r)^n_β)
     
     beta0 : inner asymptotic anisotropy
     betaInf : outer asymptotic anisotropy
-    ra : transition radius
+    rbeta : transition radius
     nbeta : transition sharpness, higher is a faster transition
 
 beta0 = 0, betaInf = 1, nbeta = 2 is the Osipkov-Merritt profile
@@ -64,22 +64,22 @@ beta0 = 0, betaInf = 0.5, nbeta = 1 is the Mamon-Lokas profile
 struct RSBetaModel <: AnisotropyModel
     beta0::Float64
     betaInf::Float64
-    ra::Float64
+    rbeta::Float64
     nbeta::Float64
 end
 
 RSBetaModel() = RSBetaModel(0.0, 0.5, 10.0, 1.0)
 
 beta(model::RSBetaModel, r) = begin
-    @. model.beta0 + (model.betaInf - model.beta0) / (1.0 + (model.ra / r) ^ model.nbeta)
+    @. model.beta0 + (model.betaInf - model.beta0) / (1.0 + (model.rbeta / r) ^ model.nbeta)
 end
 
 g_jeans(model::RSBetaModel, r) = begin
     n = model.nbeta
-    ra = model.ra
-    betaInf = model.betaInf
-    delta_beta = betaInf - model.beta0
-    return @. r ^ (2.0 * betaInf) * ((ra / r)^n + 1.0) ^ (2.0 * delta_beta / n)
+    r_β = model.rbeta
+    β_inf = model.betaInf
+    Δβ = model.betaInf - model.beta0
+    return @. r ^ (2.0 * β_inf) * ((r_β / r)^n + 1.0) ^ (2.0 * Δβ / n)
 end
 
 
