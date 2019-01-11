@@ -48,52 +48,51 @@ Rodriguez-Puebla et al. 2017.
 
 See equations 25-33 for the functional form and 49 - 55 for the parameters.
 """
-function shmr(halo::HaloModel; z = 0.0, cosmo = default_cosmo)
-    
-    Mvir = virial_mass(halo; mdef = "vir", z = z, cosmo = cosmo)
+function shmr(Mvir; z = 0.0, cosmo = default_cosmo, mdef = default_mdef)
+
+    if mdef != "vir"
+        @warn("converting $mdef to vir halo mass definition", maxlog=1)
+        @warn("assuming an NFW profile with standard concentration", maxlog=1)
+        cvir = hmcr(Mvir; z = z, cosmo = cosmo, mdef = mdef)
+        halo = NFW_from_virial(Mvir, cvir; z = z, cosmo = cosmo, mdef = mdef)
+        Mvir = virial_mass(halo; z = z, cosmo = cosmo, mdef = "vir")
+    end
     
     P(x, y, z) = y * z - x * z / (1.0 + z)
     Q(z) = exp(-4.0 / (1.0 + z)^2)
     
-    ϵ0     = -1.758
-    ϵ1     = +0.110
-    ϵ2     = -0.061
-    ϵ3     = -0.023
-    logM00 = +11.548
-    M01    = -1.297
-    M02    = -0.026
-    α0     = +1.975
-    α1     = +0.714
-    α2     = +0.042
-    δ0     = +3.390
-    δ1     = -0.472
-    δ2     = -0.931
-    γ0     = +0.498
-    γ1     = -0.157
+    ϵ0  =  -1.758
+    ϵ1  =  +0.110
+    ϵ2  =  -0.061
+    ϵ3  =  -0.023
+    M00 = +11.548
+    M01 =  -1.297
+    M02 =  -0.026
+    α0  =  +1.975
+    α1  =  +0.714
+    α2  =  +0.042
+    δ0  =  +3.390
+    δ1  =  -0.472
+    δ2  =  -0.931
+    γ0  =  +0.498
+    γ1  =  -0.157
 
     logϵ = ϵ0 + P(ϵ1, ϵ2, z) * Q(z) + P(ϵ3, 0.0, z)
-    logM0 = logM00 + P(M01, M02, z) * Q(z)
+    logM0 = M00 + P(M01, M02, z) * Q(z)
     α = α0 + P(α1, α2, z) * Q(z)
     δ = δ0 + P(δ1, δ2, z) * Q(z)
     γ = γ0 + P(γ1, 0.0, z) * Q(z)
 
-    x = Mvir / exp10(logM0)
+    x = log10(Mvir) - logM0
     g(x) = δ * log10(1.0 + exp(x))^γ / (1.0 + exp(10.0^-x)) - log10(10^(-α * x) + 1.0)
     logMstar = logϵ + logM0 + g(x) - g(0)
     
     return exp10(logMstar)
 end
 
-function shmr(Mvir; mdef = default_mdef, z = 0.0, cosmo = default_cosmo)
-    mdef == lowercase(strip(mdef))
-    if mdef != "vir"
-        @warn("converting halo mass from $mdef to vir definition", maxlog = 1)
-        @warn("assuming an NFW profile", maxlog = 1)
-        cvir = hmcr(Mvir; mdef = mdef, z = z, cosmo = cosmo)
-        halo = NFW_from_virial(Mvir, cvir; mdef = mdef, z = z, cosmo = cosmo)
-        Mvir = virial_mass(halo; mdef = "vir", z = z, cosmo = cosmo)
-    end
-    return shmr(halo; z = z, cosmo = cosmo)
+function shmr(halo::HaloModel; mdef = default_mdef, z = 0.0, cosmo = default_cosmo)
+    Mvir = virial_mass(halo; mdef = "vir", z = z, cosmo = cosmo)
+    return shmr(Mvir; z = z, cosmo = cosmo, mdef = "vir")
 end
 
 """

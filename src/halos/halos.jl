@@ -78,7 +78,7 @@ function virial_radius(halo::HaloModel;
                        cosmo = default_cosmo,
                        z = 0.0,
                        xstart = 10.0,
-                       rtol = 1e-3,
+                       rtol = 1e-2,
                        maxevals = 100)
     Δρ = Δρ_from_mdef(mdef; cosmo = cosmo, z = z)
     # function to find roots
@@ -97,10 +97,11 @@ function virial_mass(halo::HaloModel;
                      cosmo = default_cosmo,
                      z = 0.0,
                      xstart = 10.0,
-                     rtol = 1e-3)
+                     rtol = 1e-2,
+                     maxevals = 100)
     Rvir = virial_radius(halo;
                          mdef = mdef, cosmo = cosmo, z = z,
-                         xstart = xstart, rtol = rtol)
+                         xstart = xstart, rtol = rtol, maxevals = maxevals)
     return Mvir_from_Rvir(Rvir, mdef = mdef, cosmo = cosmo, z = z)
 end
 
