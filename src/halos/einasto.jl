@@ -53,7 +53,7 @@ mass(halo::EinastoModel, r) = M_Einasto(r, halo.rs, halo.rhos, halo.alpha)
 scale_radius(halo::EinastoModel) = halo.rs
 
 function Einasto_from_virial(Mvir, cvir, alpha;
-                             mdef = "200c",
+                             mdef = default_mdef,
                              cosmo = default_cosmo,
                              z = 0.0)
     Rvir = Rvir_from_Mvir(Mvir; mdef = mdef, cosmo = cosmo, z = z)

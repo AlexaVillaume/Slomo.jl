@@ -151,7 +151,7 @@ end
 
 function SolNFW_from_virial(Mvir, cvir, m22;
                             rsol = nothing,
-                            mdef = "200c",
+                            mdef = default_mdef,
                             cosmo = default_cosmo,
                             z = 0.0)
     # soliton parameters, calculate rsol from Mvir scaling if not passed in

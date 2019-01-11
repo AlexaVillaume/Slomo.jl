@@ -60,7 +60,7 @@ mass(halo::NFWModel, r) = M_NFW(r, halo.rs, halo.rhos)
 scale_radius(halo::NFWModel) = halo.rs
 
 function NFW_from_virial(Mvir, cvir;
-                         mdef = "200c",
+                         mdef = default_mdef,
                          cosmo = default_cosmo,
                          z = 0.0)
     Rvir = Rvir_from_Mvir(Mvir; mdef = mdef, cosmo = cosmo, z = z)
@@ -129,7 +129,7 @@ mass(halo::GNFWModel, r) = M_GNFW(r, halo.rs, halo.rhos, halo.gamma)
 scale_radius(halo::GNFWModel) = halo.rs
 
 function GNFW_from_virial(Mvir, cvir, gamma;
-                         mdef = "200c",
+                         mdef = default_mdef,
                          cosmo = default_cosmo,
                          z = 0.0)
     Rvir = Rvir_from_Mvir(Mvir; mdef = mdef, cosmo = cosmo, z = z)
@@ -184,7 +184,7 @@ Construct a CoreNFWModel from the scaling relations in Read et al. 2016.
     t_sf : time since start of star formation, in Gyr
 """
 function CoreNFW_from_virial(Mvir, cvir, Re, t_sf;
-                             mdef = "200c",
+                             mdef = default_mdef,
                              cosmo = default_cosmo,
                              z = 0.0,
                              κ = 0.04,
