@@ -16,7 +16,7 @@ numerically integrating the spherical Jeans equations.
     parameters : keywords to pass on to mass and tracer models
 """
 function sigma_los(model::JeansModel, R;
-                   n_interp::Int = 10, fudge = 1e-6,
+                   n_interp::Int = 10, fudge = 1e-6, interp = true,
                    parameters...)
 
     # update models with new parameters
@@ -36,7 +36,12 @@ function sigma_los(model::JeansModel, R;
     # set up interpolation grid
     Rmin = minimum(R)
     Rmax = maximum(R)
-    Rgrid = 10 .^ collect(range(log10(Rmin), stop=log10(Rmax), length=n_interp))
+    if length(R) <= n_interp
+        interp = false
+        Rgrid = R
+    else
+        Rgrid = exp10.(collect(range(log10(Rmin), stop=log10(Rmax), length=n_interp)))
+    end
 
     # construct required functions
     M(r) = mass(mass_model, r)
@@ -54,8 +59,11 @@ function sigma_los(model::JeansModel, R;
     end
  
     sgrid = @. √(2 * G / Σ(Rgrid) * integral)
-    s_itp = LinearInterpolation(Rgrid, sgrid)
-    return s_itp(R)        
+    if interp
+        return LinearInterpolation(Rgrid, sgrid)(R)
+    else
+        return sgrid
+    end
 end
 
 function integral_from_kernel(Rgrid::Array{Float64, 1},
