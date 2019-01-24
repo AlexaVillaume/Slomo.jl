@@ -1,7 +1,6 @@
 module Integrate
 
-import OrdinaryDiffEq: solve
-using OrdinaryDiffEq: ODEProblem, Tsit5
+import DifferentialEquations: solve, ODEProblem, Tsit5
 
 const alg = Tsit5()
 
