@@ -33,7 +33,7 @@ K_jeans(model::ConstantBetaModel, r, R) = begin
     β = model.beta
     # nudge half-integral beta
     if 2.0 * β - floor(2.0 * β) == 0.0
-        β = β + eps()
+        β = β + rand([1, -1]) * eps()^0.5
     end
     u = r ./ R
     um2 = u .^ -2.0

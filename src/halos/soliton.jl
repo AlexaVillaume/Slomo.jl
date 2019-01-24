@@ -32,7 +32,8 @@ end
 """
 Compute the matching radius, repsilon, from the specified NFW and SolNFW parameters.
 """
-function matching_radius(rs, rhos, rsol, rhosol; xstart = 2.0, rtol = 1e-9)
+function matching_radius(rs, rhos, rsol, rhosol;
+                         xstart = 2.0, rtol = 1e-9, maxevals = 100)
     ρ1(r) = rho_NFW(r, rs, rhos)
     dρ1(r) = drhodr_NFW(r, rs, rhos)
     ρ2(r) = rho_sol(r, rsol, rhosol)
@@ -60,7 +61,8 @@ struct SolNFWModel <: HaloModel
     rhosol::Float64
     repsilon::Float64
     # enforce density matching
-    SolNFWModel(rs, rhos, rsol, rhosol, repsilon) = begin
+    SolNFWModel(rs, rhos, rsol, rhosol, repsilon;
+                rtol = 1e-9, maxevals = 100) = begin
         ρnfw = rho_NFW(repsilon, rs, rhos)
         ρsol = rho_sol(repsilon, rsol, rhosol)
         if ((ρnfw - ρsol) / ρsol) ^ 2 < 1e-9
@@ -68,7 +70,8 @@ struct SolNFWModel <: HaloModel
         else
             @warn("recalculating matching radius", maxlog=1)
             try
-                repsilon = matching_radius(rs, rhos, rsol, rhosol)
+                repsilon = matching_radius(rs, rhos, rsol, rhosol;
+                                           rtol = rtol, maxevals = maxevals)
             catch err
                 @warn("failed to find matching radius for " *
                       "\trs = $rs \n\trhos = $rhos \n\trsol = $rsol \n\trhosol = $rhosol")
@@ -151,9 +154,8 @@ end
 
 function SolNFW_from_virial(Mvir, cvir, m22;
                             rsol = nothing,
-                            mdef = default_mdef,
-                            cosmo = default_cosmo,
-                            z = 0.0)
+                            mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
+                            rtol = 1e-9, maxevals=100)
     # soliton parameters, calculate rsol from Mvir scaling if not passed in
     if rsol == nothing
         rsol = rsol_from_Mvir(m22, Mvir)
@@ -165,7 +167,8 @@ function SolNFW_from_virial(Mvir, cvir, m22;
 
     # first guess, rhos from normal NFW profile
     rhos = Mvir / M_NFW(Rvir, rs, 1.0)
-    repsilon = matching_radius(rs, rhos, rsol, rhosol)
+    repsilon = matching_radius(rs, rhos, rsol, rhosol;
+                               rtol = rtol, maxevals = maxevals)
 
     return SolNFWModel(rs, rhos, rsol, rhosol, repsilon)
 end

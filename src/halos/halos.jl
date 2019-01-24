@@ -118,8 +118,12 @@ Compute the halo concentration.
 function concentration(halo::HaloModel;
                        mdef = default_mdef,
                        cosmo = default_cosmo,
-                       z = 0.0)
-    Rvir = virial_radius(halo; mdef = mdef, cosmo = cosmo, z = z)
+                       z = 0.0,
+                       rtol = 1e-2,
+                       maxevals = 100)
+    Rvir = virial_radius(halo;
+                         mdef = mdef, cosmo = cosmo, z = z,
+                         rtol = rtol, maxevals = maxevals)
     rs = scale_radius(halo)
     return Rvir / rs
 end

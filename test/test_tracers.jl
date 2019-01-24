@@ -1,4 +1,5 @@
-using Slomo: Models
+using Slomo: SersicModel, IsotropicModel, ConstantBetaModel, RSBetaModel
+using Slomo.Models: density, density2d, mass, potential, beta, g_jeans, K_jeans
 using Slomo.Integrate: integrate
 
 using Test
@@ -33,7 +34,7 @@ for r in [1, 1.0, [1], [1.0], [1.0, 2.0, 3.0]]
 end
 
 # constant beta model
-for model in [ConstantBetaModel(-30), ConstantBetaModel(-0.5), ConstantBetaModel(),
+for model in [ConstantBetaModel(-9.1), ConstantBetaModel(-0.5), ConstantBetaModel(),
               ConstantBetaModel(0), ConstantBetaModel(0.5), ConstantBetaModel(0.96)]
     for r in [1, 1.0, [1], [1.0], [1.0, 2.0, 3.0]]
         R = minimum(r) / 2.0
@@ -50,7 +51,6 @@ end
 # RS beta model
 model = RSBetaModel()
 for r in [1, 1.0, [1], [1.0], [1.0, 2.0, 3.0]]
-    @test beta(model, r) == zeros(size(r))
     @test size(beta(model, r)) == size(r)
     @test size(g_jeans(model, r)) == size(r)
 end

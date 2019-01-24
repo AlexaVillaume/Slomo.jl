@@ -12,8 +12,10 @@ module CosmologyTools
 import Cosmology
 using Slomo.Constants: default_cosmo, rho_crit_h2
 
+export Ωm, ρcrit, ρm
+
 Cosmology.E(c::Cosmology.AbstractCosmology, z::Array{T} where T <: Real) = begin
-    [E(c, i) for i in z]
+    [Cosmology.E(c, i) for i in z]
 end
 
 """

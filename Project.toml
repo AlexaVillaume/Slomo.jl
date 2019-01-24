@@ -1,0 +1,18 @@
+name = "Slomo"
+uuid = "33f719cc-2011-11e9-2410-7d4c575d1731"
+authors = ["Asher Wasserman <asher.d.wasserman@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Cosmology = "76746363-e552-5dba-9a5a-cef6fa9cc5ab"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+EllipsisNotation = "da5c29d0-fa7d-589e-88eb-ea29b0a81949"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+HypergeometricFunctions = "51a73faa-16c5-5f70-af57-d1417a5d2f4c"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

@@ -163,12 +163,12 @@ CoreNFWModel() = CoreNFWModel(25.3, 3.7e6, 12.5, 0.5)
 scale_radius(halo::CoreNFWModel) = halo.rs
 
 density(halo::CoreNFWModel, r) = begin
-    f = tanh(r / halo.rc)
-    fn = f ^ halo.nc
-    fnm1 = f ^ (halo.nc - 1.0)
-    ρnfw = rho_NFW(r, halo.rs, halo.rhos)
-    Mnfw = M_NFW(r, halo.rs, halo.rhos)
-    return fn * ρnfw + halo.nc * fnm1 * (1.0 - f ^ 2) * Mnfw / (4π * r^2 * halo.rc)
+    f = tanh.(r / halo.rc)
+    fn = f .^ halo.nc
+    fnm1 = f .^ (halo.nc - 1.0)
+    ρnfw = rho_NFW.(r, halo.rs, halo.rhos)
+    Mnfw = M_NFW.(r, halo.rs, halo.rhos)
+    return @. fn * ρnfw + halo.nc * fnm1 * (1.0 - f ^ 2) * Mnfw / (4π * r^2 * halo.rc)
 end
 
 mass(halo::CoreNFWModel, r) = begin

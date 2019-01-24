@@ -101,7 +101,7 @@ Gravitational potential at r.  Equal to the square of the circular velocity.
 If not defined for a subtype of DensityModel, then calculate from the enclosed
 mass.
 """
-function potential(model::DensityModel)
+function potential(model::DensityModel, r)
     return -G * mass(model, r) ./ r
 end
 

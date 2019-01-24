@@ -66,8 +66,8 @@ function sigma_los(model::JeansModel, R;
     end
 end
 
-function integral_from_kernel(Rgrid::Array{Float64, 1},
-                              M, ρ, K; fudge = 1e-6)::Array{Float64, 1}
+function integral_from_kernel(Rgrid,
+                              M, ρ, K; fudge = 1e-6)
     integral = zeros(size(Rgrid))
     for (i, Ri) in enumerate(Rgrid)
         integrand(r) = K(r, Ri) * M(r) * ρ(r) / r
@@ -78,7 +78,7 @@ function integral_from_kernel(Rgrid::Array{Float64, 1},
 end
 
 function integral_from_srad(Rgrid::Array{Float64, 1},
-                            M, ρ, β, g; fudge = 1e-6)::Array{Float64, 1}
+                            M, ρ, β, g; fudge = 1e-6)
     # construct radial velocity dispersion function
     ρσr2_integrand(r) = -M(r) * ρ(r) * g(r) / r ^ 2
     ρσr2_sol = solve(ρσr2_integrand, rmax, Rgrid[1])
