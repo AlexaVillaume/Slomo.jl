@@ -115,3 +115,38 @@ function shmr_prior(halo::HaloModel, Mstar;
     logMstar = log10(Mstar)
     return log_gauss(logMstar, logMstar_expected, sigma_logMstar)
 end
+
+"""
+Computes the dimensionless peak height, ν = δ_crit(z) / σ(M, z), using the
+approximation of Dutton & Maccio 2014 for a Planck 2013 cosmology.
+"""
+function peak_height(Mvir, z; cosmo = default_cosmo, mdef="200c")
+    if mdef != "200c"
+        throw("only implemented for 200c definition")
+    end
+    m = @. log10(M / 1e12 * cosmo.h)
+    ν0 = @. exp10(-0.11 + 0.146 * m + 0.0138 * m^2 + 0.00123 * m^3)
+    return @. ν0 * (0.033 + 0.79 * (1.0 + z) + 0.176 * exp(-1.356 * z))
+end
+
+"""
+α-ν relation of Gao+2008
+"""
+function alpha_peak(Mvir; z = 0.0, cosmo = default_cosmo, mdef = "200c")
+    if mdef != "200c"
+        throw("only implemented for 200c definition")
+    end
+    ν = peak_height(Mvir, z; cosmo = cosmo, mdef = mdef)
+    return @. 0.0095 * ν^2 + 0.155
+end
+
+function alpha_peak_prior(Mvir, alpha;
+                          mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
+                          sigma0 = 0.16, sigmaz = 0.03)
+    sigma_logalpha = sigma0 + sigmaz * z
+    logalpha_expected = log10(alpha_peak(Mvir; z = z, cosmo = cosmo, mdef = mdef))
+    logalpha = log10(alpha)
+    return log_gauss(logalpha, logalpha_expected, sigma_logalpha)
+end
+
+    
