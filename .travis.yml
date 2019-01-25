@@ -5,6 +5,10 @@ os:
   - linux
 notifications:
   email: false
+cache:
+  timeout: 3600
+  directories:
+    - $HOME/.julia
 codecov: true
 after_success:
   - julia -e 'import Pkg, Slomo; cd(joinpath(dirname(pathof(Slomo)), "..")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
