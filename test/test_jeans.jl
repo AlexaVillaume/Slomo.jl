@@ -1,4 +1,4 @@
-using Slomo: IsotropicModel, ConstantBetaModel, Halos, SersicModel, sigma_los
+using Slomo: JeansModel, IsotropicModel, ConstantBetaModel, Halos, SersicModel, sigma_los
 
 using Test
 
