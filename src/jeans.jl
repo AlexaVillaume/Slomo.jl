@@ -36,8 +36,7 @@ function sigma_los(model::JeansModel, R;
     # set up interpolation grid
     Rmin = minimum(R)
     Rmax = maximum(R)
-    if length(R) <= n_interp
-        interp = false
+    if (length(R) <= n_interp) || ~interp
         Rgrid = R
     else
         Rgrid = exp10.(collect(range(log10(Rmin), stop=log10(Rmax), length=n_interp)))
