@@ -149,4 +149,20 @@ function alpha_peak_prior(Mvir, alpha;
     return log_gauss(logalpha, logalpha_expected, sigma_logalpha)
 end
 
-    
+"""
+αβγ scalings with Mstar / Mhalo from DiCintio+2014a.
+
+logshm is log10(Mstar / Mvir)
+"""
+function abg_from_logshm(logshm)
+    x = logshm
+    if x < -4.1 || x > -1.3
+        return 1, 3, 1
+    end
+    α = 2.94 - log10(exp10(-1.08 * (x + 2.33)) + exp10(2.29 * (x + 2.33)))
+    β = 4.23 + 1.34 * x + 0.26 * x^2
+    γ = -0.06 + log10(exp10(-0.68 * (x + 2.56)) + exp10(x + 2.56))
+    return α, β, γ
+end
+
+
