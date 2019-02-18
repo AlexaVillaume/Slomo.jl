@@ -28,9 +28,38 @@ function drhodr_sol(r, rsol, rhosol)
     x = r / rsol
     return @. -16 * rhosol * x * (1.0 + x^2) ^ -9
 end
-    
+
 """
-Compute the matching radius, repsilon, from the specified NFW and SolNFW parameters.
+Calculate the axion mass from the soliton scale parameters.
+See Marsh & Pop 2015, equation 8.  Axion mass has units of 1e-22 eV.
+alpha_mp is the alpha fitting parameter from Marsh & Pop 2015
+"""
+function m22_from_sol(rsol, rhosol;
+                      cosmo = default_cosmo, z = 0.0, alpha_mp = 0.23)
+    Δ_sol = rhosol / ρcrit(z; cosmo = cosmo)
+    m22 = √(Δ_sol ^ -1 * rsol ^ -4 * (cosmo.h / 0.7) ^ 2 * 5e4 * alpha_mp ^ -4)
+    return m22
+end
+
+"""
+Calculate the scale density of the soliton core from m22 and the scale radius.
+"""
+function rhosol_from_rsol(m22, rsol;
+                         cosmo = default_cosmo, z = 0.0, alpha_mp = 0.23)
+    Δ_sol = (5e4 / alpha_mp^4) * (cosmo.h / 0.7)^-2 * m22^-2 * rsol^-4
+    return Δ_sol * ρcrit(z; cosmo = cosmo)
+end
+
+"""
+Calculate the scale radius of the soliton core from the halo mass scaling 
+relation (see Robles+2019)
+"""
+function rsol_from_Mvir(m22, Mvir)
+    rsol = 3.315 * 1.6 * (Mvir / 1e9)^(-1/3.) * m22^-1
+end
+
+"""
+Compute the matching radius, repsilon, from the specified NFW and Sol parameters.
 """
 function matching_radius(rs, rhos, rsol, rhosol;
                          xstart = 2.0, rtol = 1e-9, maxevals = 100)
@@ -84,7 +113,6 @@ end
 
 SolNFWModel() = SolNFWModel(21.1, 5.6e6, 0.53, 3.1e10, 0.48)
 
-
 density(halo::SolNFWModel, r::T where T <: Real) = begin
     if r < halo.repsilon
         return rho_sol(r, halo.rsol, halo.rhosol)
@@ -123,35 +151,6 @@ end
 
 scale_radius(halo::SolNFWModel) = halo.rs
 
-"""
-Calculate the axion mass from the soliton scale parameters.
-See Marsh & Pop 2015, equation 8.  Axion mass has units of 1e-22 eV.
-alpha_mp is the alpha fitting parameter from Marsh & Pop 2015
-"""
-function m22_from_sol(rsol, rhosol;
-                      cosmo = default_cosmo, z = 0.0, alpha_mp = 0.23)
-    Δ_sol = rhosol / ρcrit(z; cosmo = cosmo)
-    m22 = √(Δ_sol ^ -1 * rsol ^ -4 * (cosmo.h / 0.7) ^ 2 * 5e4 * alpha_mp ^ -4)
-    return m22
-end
-
-"""
-Calculate the scale density of the soliton core from m22 and the scale radius.
-"""
-function rhosol_from_rsol(m22, rsol;
-                         cosmo = default_cosmo, z = 0.0, alpha_mp = 0.23)
-    Δ_sol = (5e4 / alpha_mp^4) * (cosmo.h / 0.7)^-2 * m22^-2 * rsol^-4
-    return Δ_sol * ρcrit(z; cosmo = cosmo)
-end
-
-"""
-Calculate the scale radius of the soliton core from the halo mass scaling 
-relation (see Robles+2019)
-"""
-function rsol_from_Mvir(m22, Mvir)
-    rsol = 3.315 * 1.6 * (Mvir / 1e9)^(-1/3.) * m22^-1
-end
-
 function SolNFW_from_virial(Mvir, cvir, m22;
                             rsol = nothing,
                             mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
@@ -172,3 +171,136 @@ function SolNFW_from_virial(Mvir, cvir, m22;
 
     return SolNFWModel(rs, rhos, rsol, rhosol, repsilon)
 end
+
+#==============================================
+Soliton αβγ model, see DiCintio+2014a
+Soliton profile + general double power law halo
+==============================================#
+
+"""
+Compute the matching radius, repsilon, from the specified αβγ and Sol parameters.
+"""
+function matching_radius(rs, rhos, alpha, beta, gamma, rsol, rhosol;
+                         xstart = 2.0, rtol = 1e-6, maxevals = 100)
+    ρ1(r) = rho_ABG(r, rs, rhos, alpha, beta, gamma)
+    dρ1(r) = drhodr_ABG(r, rs, rhos, alpha, beta, gamma)
+    ρ2(r) = rho_sol(r, rsol, rhosol)
+    dρ2(r) = drhodr_sol(r, rsol, rhosol)
+    f(r) = (1.0 - ρ1(r) / ρ2(r)) ^ 2
+    fp(r) = -2.0 * (1.0 - ρ1(r) / ρ2(r)) * (dρ1(r) / ρ2(r) - ρ1(r) * dρ2(r) / ρ2(r)^2)
+    return fzero(f, fp, xstart * rsol; rtol = rtol)
+end
+
+"""
+Soliton αβγ model.  For consistency, the αβγ density profile must match the 
+soliton density profile at repsilon.  If that is not the case, the constructor 
+will update repsilon.
+
+    rs : scale radius in kpc
+    rhos : scale density in Msun / kpc3
+    alpha : transition sharpness
+    beta : negative outer log slope
+    gamma : negative inner log slope
+    rsol : soliton scale radius in kpc
+    rhosol : soliton scale density in kpc
+    repsilon : transition radius
+
+"""
+struct SolABGModel <: HaloModel
+    rs::Float64
+    rhos::Float64
+    alpha::Float64
+    beta::Float64
+    gamma::Float64
+    rsol::Float64
+    rhosol::Float64
+    repsilon::Float64
+    # enforce density matching
+    SolABGModel(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon;
+                rtol = 1e-6, maxevals = 100) = begin
+        ρabg = rho_ABG(repsilon, rs, rhos, alpha, beta, gamma)
+        ρsol = rho_sol(repsilon, rsol, rhosol)
+        if ((ρabg - ρsol) / ρsol) ^ 2 < rtol
+            return new(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon)
+        else
+            @warn("recalculating matching radius", maxlog=1)
+            try
+                repsilon = matching_radius(rs, rhos, alpha, beta, gamma,
+                                           rsol, rhosol;
+                                           rtol = rtol, maxevals = maxevals)
+            catch err
+                @warn("failed to find matching radius for " *
+                      "\trs = $rs \n\trhos = $rhos \n\trsol = $rsol \n\trhosol = $rhosol")
+                throw(err)
+            end
+            return new(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon)
+        end
+    end
+end
+
+SolABGModel() = SolABGModel(21.1, 5.6e6, 1, 3, 1, 0.53, 3.1e10, 0.48)
+
+density(halo::SolABGModel, r::T where T <: Real) = begin
+    if r < halo.repsilon
+        return rho_sol(r, halo.rsol, halo.rhosol)
+    end
+    return rho_ABG(r, halo.rs, halo.rhos, halo.alpha, halo.beta, halo.gamma)
+end
+
+density(halo::SolABGModel, r::Array{T, 1} where T <: Real) = begin
+    ρ = zero(r)
+    idx_sol = r .< halo.repsilon
+    idx_abg = .~ idx_sol
+    ρ[idx_sol] = rho_sol(r[idx_sol], halo.rsol, halo.rhosol)
+    ρ[idx_abg] = rho_ABG(r[idx_abg], halo.rs, halo.rhos, halo.alpha, halo.beta, halo.gamma)
+    return ρ
+end
+
+mass(halo::SolABGModel, r::T where T <: Real) = begin
+    if r < halo.repsilon
+        return M_sol(r, halo.rsol, halo.rhosol)
+    end
+    dM_epsilon = (M_sol(halo.repsilon, halo.rsol, halo.rhosol) -
+                  M_ABG(halo.repsilon, halo.rs, halo.rhos, halo.alpha, halo.beta, halo.gamma))
+    return M_ABG(r, halo.rs, halo.rhos, halo.alpha, halo.beta, halo.gamma) + dM_epsilon
+end
+
+mass(halo::SolABGModel, r::Array{T, 1} where T <: Real) = begin
+    M = zero(r)
+    dM_epsilon = (M_sol(halo.repsilon, halo.rsol, halo.rhosol) -
+                  M_ABG(halo.repsilon, halo.rs, halo.rhos, halo.alpha, halo.beta, halo.gamma))
+    idx_sol = r .< halo.repsilon
+    idx_nfw = .~ idx_sol
+    M[idx_sol] = M_sol(r[idx_sol], halo.rsol, halo.rhosol)
+    M[idx_nfw] = M_ABG(r[idx_nfw], halo.rs, halo.rhos, halo.alpha, halo.beta, halo.gamma) .+ dM_epsilon
+    return M
+end
+
+scale_radius(halo::SolABGModel) = begin
+    ((2 - halo.gamma) / (halo.beta - 2)) ^ (1 / halo.alpha) * halo.rs
+end
+
+function SolABG_from_virial(Mvir, cvir, alpha, beta, gamma, m22;
+                            rsol = nothing,
+                            mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
+                            rtol = 1e-9, maxevals=100)
+    # soliton parameters, calculate rsol from Mvir scaling if not passed in
+    if rsol == nothing
+        rsol = rsol_from_Mvir(m22, Mvir)
+    end
+    rhosol = rhosol_from_rsol(m22, rsol, cosmo = cosmo, z = z)
+    # ABG parameters
+    Rvir = Rvir_from_Mvir(Mvir; mdef = mdef, cosmo = cosmo, z = z)
+    r2 = Rvir / cvir
+    rs = ((2 - gamma) / (beta - 2))^(-1 / alpha) * r2
+
+    # first guess, rhos from normal ABG profile
+    rhos = Mvir / M_ABG(Rvir, rs, 1.0, alpha, beta, gamma)
+    repsilon = matching_radius(rs, rhos, alpha, beta, gamma, rsol, rhosol;
+                               rtol = rtol, maxevals = maxevals)
+
+    return SolABGModel(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon)
+end
+
+
+
