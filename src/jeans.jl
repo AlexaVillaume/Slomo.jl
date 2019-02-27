@@ -1,4 +1,5 @@
 using Interpolations: LinearInterpolation
+using DifferentialEquations
 
 using Slomo.Models: update, JeansModel, NotImplemented, has_analytic_profile
 using Slomo.Models: mass, density, density2d, K_jeans, g_jeans, beta
@@ -12,7 +13,7 @@ numerically integrating the spherical Jeans equations.
     model : potential and tracer models
     R : projected radii in kpc
     n_interp : number of points on the interpolation grid for the moment
-    rmax : upper limit of projection integration, in kpc
+    
     parameters : keywords to pass on to mass and tracer models
 """
 function sigma_los(model::JeansModel, R;
@@ -54,7 +55,7 @@ function sigma_los(model::JeansModel, R;
     if has_kernel
         integral = integral_from_kernel(Rgrid, M, ρ, K; fudge = fudge)
     else
-        integral = integral_from_srad(Rgrid, M, ρ, β, g; fudge = fudge)
+        integral = integral_from_vr2(Rgrid, M, ρ, β, g; fudge = fudge)
     end
  
     sgrid = @. √(2 * G / Σ(Rgrid) * integral)
@@ -65,6 +66,103 @@ function sigma_los(model::JeansModel, R;
     end
 end
 
+"""
+Calculate the line-of-sight excess kurtosis by numerically integrating the 
+spherical Jeans equations.
+
+    model : potential and tracer models
+    R : projected radii in kpc
+    parameters : keywords to pass on to mass and tracer models
+    return_sigma : if true, will return both excess kurtosis and dispersion
+"""
+function kappa_los(model::JeansModel, R;
+                   n_interp::Int = 10, fudge = 1e-6, interp = true, return_sigma = false,
+                   parameters...)
+    # update models with new parameters
+    if length(keys(parameters)) > 0
+        model = update(model; parameters...)
+    end
+    mass_model = model.mass_model
+    density_model = model.density_model
+    anisotropy_model = model.anisotropy_model
+
+    # set up interpolation grid
+    Rmin = minimum(R)
+    Rmax = maximum(R)
+    if (length(R) <= n_interp) || ~interp
+        Rgrid = R
+    else
+        Rgrid = exp10.(collect(range(log10(Rmin), stop=log10(Rmax), length=n_interp)))
+    end
+
+    # construct required functions
+    M(r) = mass(mass_model, r)
+    ρ(r) = density(density_model, r)
+    Σ(R) = density2d(density_model, R)
+    K(r, R) = K_jeans(anisotropy_model, r, R)
+    β(r) = beta(anisotropy_model, r)
+    g(r) = g_jeans(anisotropy_model, r)
+
+    rmin = minimum(Rgrid)
+    rmax = 1e2
+    
+    # integrand for ρ * g * v_r^2
+    ρgvr2_integrand(r) = -G * M(r) * ρ(r) * g(r) / r ^ 2
+    prob = ODEProblem((u, p, t) -> ρgvr2_integrand(t), 0.0, (rmax, rmin * 1e-2))
+    ρgvr2_sol = solve(prob, Tsit5() , isoutofdomain=(u, p, t) -> any(u .<= 0))
+
+    # capture bad inputs, restrict output to non-negative values
+    ρgvr2(r) = begin
+        if r > rmax
+            return 0.0
+        end
+        return max(ρgvr2_sol(r), 0.0)
+    end
+    
+    # calculate the second moment of the losvd
+    integral = zeros(size(Rgrid))
+    for (i, R) in enumerate(Rgrid)
+        integrand(r) = (1.0 - β(r) * (R / r)^2) * ρgvr2(r) / g(r) * r / √(r^2 - R^2)
+        sol = solve(integrand, rmax, R * (1.0 + fudge))
+        integral[i] = sol[1] - sol[end]
+    end
+    sgrid = @. √(2 / Σ(Rgrid) * integral)
+
+    # integrand for ρ * g * v_r^4 / G
+    ρgvr4_integrand(r) = -3 * ρgvr2(r) * G * M(r) / r ^ 2
+    prob = ODEProblem((u, p, t) -> ρgvr4_integrand(t), 0.0, (rmax, rmin * 1e-1))
+    ρgvr4_sol = solve(prob, Tsit5() , isoutofdomain=(u, p, t) -> any(u .<= 0))
+   
+    # capture bad inputs, restrict output to non-negative values
+    ρvr4(r) = begin
+        if r > rmax
+            return 0.0
+        end
+        y = ρgvr4_sol(r) / g(r)
+        return max(y, 0.0) 
+    end
+    
+    # calculate fourth moment of the losvd
+    integral = zeros(size(Rgrid))
+    for (i, R) in enumerate(Rgrid)
+        integrand(r) = begin
+            factor1 = (1 - 2 * β(r) * (R / r)^2 + β(r) * (1 + β(r)) / 2 * (R / r)^4)
+            factor2 = ρvr4(r) * r / √(r^2 - R^2)
+            factor1 * factor2
+        end
+        sol = solve(integrand, rmax, R * (1.0 + fudge))
+        integral[i] = sol[1] - sol[end]
+    end
+    v4los = @. 2 / Σ(Rgrid) * integral
+    kgrid = @. v4los / sgrid ^ 4 - 3
+    
+    if return_sigma
+        return kgrid, sgrid
+    else
+        return kgrid
+    end
+end
+       
 function integral_from_kernel(Rgrid,
                               M, ρ, K; fudge = 1e-6)
     integral = zeros(size(Rgrid))
@@ -76,18 +174,30 @@ function integral_from_kernel(Rgrid,
     return integral    
 end
 
-function integral_from_srad(Rgrid::Array{Float64, 1},
-                            M, ρ, β, g; fudge = 1e-6)
-    # construct radial velocity dispersion function
-    ρσr2_integrand(r) = -M(r) * ρ(r) * g(r) / r ^ 2
-    ρσr2_sol = solve(ρσr2_integrand, rmax, Rgrid[1])
-    # account for any numerical noise that fluctuates the integral to be negative
-    σr2(r) = max(ρσr2_sol(r) / (ρ(r) * g(r)), 0.0)
+function integral_from_vr2(Rgrid::Array{Float64, 1}, M, ρ, β, g; fudge = 1e-6)
+    
+    rmin = minimum(Rgrid)
+    rmax = 1e2
+    
+    # integrand for ρ * g * v_r^2
+    ρgvr2_integrand(r) = -G * M(r) * ρ(r) * g(r) / r ^ 2
+    prob = ODEProblem((u, p, t) -> ρgvr2_integrand(t), 0.0, (rmax, rmin * 1e-2))
+    ρgvr2_sol = solve(prob, Tsit5() , isoutofdomain=(u, p, t) -> any(u .<= 0))
+
+    ρgvr2(r) = begin
+        if r <= rmax
+            return max(ρgvr2_sol(r), 0.0)
+        else
+            return 0.0
+        end
+    end
+    
     integral = zeros(size(Rgrid))
-    for (i, Ri) in enumerate(Rgrid)
-        integrand(r) = (1.0 - β(r) * Ri^2 / r^2) * ρ(r) * σr2(r) * r / √(r^2 - Ri^2)
-        sol = solve(integrand, rmax, Ri * (1.0 + fudge))
+    for (i, R) in enumerate(Rgrid)
+        integrand(r) = (1.0 - β(r) * (R / r)^2) * ρgvr2(r) / g(r) * r / √(r^2 - R^2)
+        sol = solve(integrand, rmax, R * (1.0 + fudge))
         integral[i] = sol[1] - sol[end]
     end
     return integral
 end
+

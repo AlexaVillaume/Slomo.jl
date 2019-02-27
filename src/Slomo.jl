@@ -17,6 +17,6 @@ using Slomo.Halos
 using Slomo.IO
 
 export Halos, SersicModel, ConstantBetaModel, RSBetaModel, JeansModel
-export sigma_los, mass, density, density2d, beta, update, sample
+export sigma_los, kappa_los, mass, density, density2d, beta, update, sample
 
 end
