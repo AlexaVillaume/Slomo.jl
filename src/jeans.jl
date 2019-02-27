@@ -58,7 +58,7 @@ function sigma_los(model::JeansModel, R;
         integral = integral_from_vr2(Rgrid, M, ρ, β, g; fudge = fudge)
     end
  
-    sgrid = @. √(2 * G / Σ(Rgrid) * integral)
+    sgrid = @. √(2 / Σ(Rgrid) * integral)
     if interp
         return LinearInterpolation(Rgrid, sgrid)(R)
     else
@@ -99,7 +99,6 @@ function kappa_los(model::JeansModel, R;
     M(r) = mass(mass_model, r)
     ρ(r) = density(density_model, r)
     Σ(R) = density2d(density_model, R)
-    K(r, R) = K_jeans(anisotropy_model, r, R)
     β(r) = beta(anisotropy_model, r)
     g(r) = g_jeans(anisotropy_model, r)
 
@@ -167,7 +166,7 @@ function integral_from_kernel(Rgrid,
                               M, ρ, K; fudge = 1e-6)
     integral = zeros(size(Rgrid))
     for (i, Ri) in enumerate(Rgrid)
-        integrand(r) = K(r, Ri) * M(r) * ρ(r) / r
+        integrand(r) = K(r, Ri) * G * M(r) * ρ(r) / r
         sol = solve(integrand, rmax, Ri * (1.0 + fudge))
         integral[i] = sol[1] - sol[end]
     end
