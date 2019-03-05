@@ -69,7 +69,7 @@ function matching_radius(rs, rhos, rsol, rhosol;
     dρ2(r) = drhodr_sol(r, rsol, rhosol)
     f(r) = (1.0 - ρ1(r) / ρ2(r)) ^ 2
     fp(r) = -2.0 * (1.0 - ρ1(r) / ρ2(r)) * (dρ1(r) / ρ2(r) - ρ1(r) * dρ2(r) / ρ2(r)^2)
-    return fzero(f, fp, xstart * rsol; rtol = rtol)
+    return fzero(f, fp, xstart * rsol; rtol = rtol, maxevals = maxevals)
 end
 
 """
