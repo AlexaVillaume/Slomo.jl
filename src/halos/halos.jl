@@ -16,6 +16,11 @@ using Slomo.Utils: log_gauss
 using Slomo.CosmologyTools: Ωm, ρm, ρcrit
 import Slomo.Models: DensityModel, mass, density, NotImplemented
 
+export virial_radius, virial_mass, scale_radius, concentration
+export NFWModel, CoreNFWModel, ABGModel, EinastoModel, SolNFWModel, SolABGModel
+export NFW_from_virial, CoreNFW_from_virial, ABG_from_virial, SolNFW_from_virial, SolABG_from_virial
+export hmcr, shmr, abg_from_logshm
+    
 const default_mdef = "200c"
 
 abstract type HaloModel <: DensityModel end
