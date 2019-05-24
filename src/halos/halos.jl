@@ -134,9 +134,9 @@ function concentration(halo::HaloModel;
 end
 
 include("nfw.jl")
+include("relations.jl")
 include("abg.jl")
 include("einasto.jl")
 include("soliton.jl")
-include("relations.jl")
 
 end

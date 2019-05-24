@@ -105,3 +105,15 @@ function ABG_from_virial(Mvir, cvir, alpha, beta, gamma;
     rhos = Mvir / M_ABG(Rvir, rs, 1.0, alpha, beta, gamma)
     return ABGModel(rs, rhos, alpha, beta, gamma)
 end
+
+function ABG_from_virial(Mvir, cvir, Mstar;
+                         mdef = default_mdef,
+                         cosmo = default_cosmo,
+                         z = 0.0)
+    Rvir = Rvir_from_Mvir(Mvir; mdef = mdef, cosmo = cosmo, z = z)
+    alpha, beta, gamma = abg_from_logshm(log10(Mstar / Mvir))
+    r2 = Rvir / cvir
+    rs = ((2 - gamma) / (beta - 2))^(-1 / alpha) * r2
+    rhos = Mvir / M_ABG(Rvir, rs, 1.0, alpha, beta, gamma)
+    return ABGModel(rs, rhos, alpha, beta, gamma)
+end
