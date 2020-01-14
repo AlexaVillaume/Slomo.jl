@@ -5,3 +5,5 @@ deps/deps.jl
 
 .ipynb_checkpoints
 *.ipynb
+
+Manifest.toml
