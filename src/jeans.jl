@@ -17,7 +17,7 @@ numerically integrating the spherical Jeans equations.
     parameters : keywords to pass on to mass and tracer models
 """
 function sigma_los(model::JeansModel, R;
-                   n_interp::Int = 10, fudge = 1e-6, interp = true,
+                   n_interp::Int = 10, fudge = 1e-6, interp = true, rmax = 1e2,
                    parameters...)
     
     # update models with new parameters
@@ -54,9 +54,11 @@ function sigma_los(model::JeansModel, R;
     
     # if we have an analytic Jeans kernel, use it!
     if has_kernel
-        integral = integral_from_kernel(Rgrid, M, ρ, K; fudge = fudge)
+        integral = integral_from_kernel(Rgrid, M, ρ, K; fudge = fudge,
+                                        rmax = rmax)
     else
-        integral = integral_from_vr2(Rgrid, M, ρ, β, g; fudge = fudge)
+        integral = integral_from_vr2(Rgrid, M, ρ, β, g; fudge = fudge,
+                                     rmax = rmax)
     end
 
     # restrict to non-negative quantities
@@ -79,7 +81,8 @@ spherical Jeans equations.
     return_sigma : if true, will return both excess kurtosis and dispersion
 """
 function kappa_los(model::JeansModel, R;
-                   n_interp::Int = 10, fudge = 1e-6, interp = true, return_sigma = false,
+                   n_interp::Int = 10, fudge = 1e-6, interp = true,
+                   return_sigma = false, rmax = 1e2,
                    parameters...)
     # update models with new parameters
     if length(keys(parameters)) > 0
@@ -106,7 +109,6 @@ function kappa_los(model::JeansModel, R;
     g(r) = g_jeans(anisotropy_model, r)
 
     rmin = minimum(Rgrid)
-    rmax = 1e2
     
     # integrand for ρ * g * v_r^2
     ρgvr2_integrand(r) = -G * M(r) * ρ(r) * g(r) / r ^ 2
@@ -165,8 +167,7 @@ function kappa_los(model::JeansModel, R;
     end
 end
        
-function integral_from_kernel(Rgrid,
-                              M, ρ, K; fudge = 1e-6)
+function integral_from_kernel(Rgrid, M, ρ, K; fudge = 1e-6, rmax = 1e2)
     integral = zeros(size(Rgrid))
     for (i, Ri) in enumerate(Rgrid)
         integrand(r) = K(r, Ri) * G * M(r) * ρ(r) / r
@@ -176,10 +177,9 @@ function integral_from_kernel(Rgrid,
     return integral    
 end
 
-function integral_from_vr2(Rgrid::Array{Float64, 1}, M, ρ, β, g; fudge = 1e-6)
+function integral_from_vr2(Rgrid::Array{Float64, 1}, M, ρ, β, g; fudge = 1e-6, rmax = 1e2)
     
     rmin = minimum(Rgrid)
-    rmax = 1e2
     
     # integrand for ρ * g * v_r^2
     ρgvr2_integrand(r) = -G * M(r) * ρ(r) * g(r) / r ^ 2
