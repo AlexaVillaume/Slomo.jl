@@ -29,8 +29,4 @@ const rho_crit_h2 = 2.774848e+02
 # radians per arcsecond
 const rad_per_arcsec = 4.84813681109536e-06
 
-# maximum integration radius in kpc
-const rmax = 1e2 
-
-
 end

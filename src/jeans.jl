@@ -3,7 +3,7 @@ using DifferentialEquations
 
 using Slomo.Models: update, JeansModel, NotImplemented, has_analytic_profile
 using Slomo.Models: mass, density, density2d, K_jeans, g_jeans, beta
-using Slomo.Constants: G, rmax
+using Slomo.Constants: G
 using Slomo.Integrate: solve, integrate
 
 """
@@ -19,7 +19,7 @@ numerically integrating the spherical Jeans equations.
 function sigma_los(model::JeansModel, R;
                    n_interp::Int = 10, fudge = 1e-6, interp = true,
                    parameters...)
-
+    
     # update models with new parameters
     if length(keys(parameters)) > 0
         model = update(model; parameters...)
@@ -39,6 +39,7 @@ function sigma_los(model::JeansModel, R;
     Rmax = maximum(R)
     if (length(R) <= n_interp) || ~interp
         Rgrid = R
+        interp = false
     else
         Rgrid = exp10.(collect(range(log10(Rmin), stop=log10(Rmax), length=n_interp)))
     end
@@ -57,7 +58,9 @@ function sigma_los(model::JeansModel, R;
     else
         integral = integral_from_vr2(Rgrid, M, ρ, β, g; fudge = fudge)
     end
- 
+
+    # restrict to non-negative quantities
+    integral[integral .< eps()] .= 0
     sgrid = @. √(2 / Σ(Rgrid) * integral)
     if interp
         return LinearInterpolation(Rgrid, sgrid)(R)

@@ -7,7 +7,7 @@ Basic types and methods.
 """
 module Models
 
-using Slomo.Constants: G, rmax
+using Slomo.Constants: G
 using Slomo.Integrate: solve, integrate
 
 struct NotImplemented <: Exception end
