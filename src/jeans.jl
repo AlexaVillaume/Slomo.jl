@@ -1,5 +1,6 @@
 using Interpolations: LinearInterpolation
 using DifferentialEquations
+using Distributed: pmap
 
 using Slomo.Models: update, JeansModel, NotImplemented, has_analytic_profile
 using Slomo.Models: mass, density, density2d, K_jeans, g_jeans, beta
@@ -71,6 +72,19 @@ function sigma_los(model::JeansModel, R;
     end
 end
 
+"""
+
+"""
+function sigma_los_parallel(model::JeansModel, R,
+                            parameter_sets::Array{Dict{Symbol,T}} where T<:Number;
+                            n_interp::Int = 10, fudge = 1e-6, interp = true, rmax = 1e2)
+    return pmap(params -> sigma_los(model, R;
+                                    n_interp = n_interp, fudge = fudge,
+                                    interp = interp, rmax = rmax,
+                                    params...),
+                parameter_sets)
+end
+                            
 """
 Calculate the line-of-sight excess kurtosis by numerically integrating the 
 spherical Jeans equations.
