@@ -1,6 +1,5 @@
 using Interpolations: LinearInterpolation
 using DifferentialEquations
-using Distributed: pmap
 
 using Slomo.Models: update, JeansModel, NotImplemented, has_analytic_profile
 using Slomo.Models: mass, density, density2d, K_jeans, g_jeans, beta
@@ -73,16 +72,22 @@ function sigma_los(model::JeansModel, R;
 end
 
 """
+Use multi-threading to map out the integration to different threads.
 
+parameter_sets should be an array of dictionaries containing parameter values
+to use for the integration
 """
 function sigma_los_parallel(model::JeansModel, R,
                             parameter_sets::Array{Dict{Symbol,T}} where T<:Number;
                             n_interp::Int = 10, fudge = 1e-6, interp = true, rmax = 1e2)
-    return pmap(params -> sigma_los(model, R;
-                                    n_interp = n_interp, fudge = fudge,
-                                    interp = interp, rmax = rmax,
-                                    params...),
-                parameter_sets)
+    sigma_profiles = zeros(length(parameter_sets), length(R))
+    Threads.@threads for i = 1:length(parameter_sets)
+        sigma_profiles[i, :] = sigma_los(model, R;
+                                         n_interp = n_interp, fudge = fudge,
+                                         interp = interp, rmax = rmax,
+                                         parameter_sets[i]...)
+    end
+    return sigma_profiles
 end
                             
 """
