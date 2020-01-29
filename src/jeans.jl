@@ -78,8 +78,12 @@ parameter_sets should be an array of dictionaries containing parameter values
 to use for the integration
 """
 function sigma_los_parallel(model::JeansModel, R,
-                            parameter_sets::Array{Dict{Symbol,T}} where T<:Number;
+                            parameter_sets::Vector{Dict},
                             n_interp::Int = 10, fudge = 1e-6, interp = true, rmax = 1e2)
+    if typeof(collect(keys(parameter_sets[1]))) <: AbstractString
+        parameter_sets = [Dict(Symbol(k) => v for (k, v) in dict)
+                          for dict in parameter_sets]
+    end
     sigma_profiles = zeros(length(parameter_sets), length(R))
     Threads.@threads for i = 1:length(parameter_sets)
         sigma_profiles[i, :] = sigma_los(model, R;
