@@ -77,10 +77,10 @@ Use multi-threading to map out the integration to different threads.
 parameter_sets should be an array of dictionaries containing parameter values
 to use for the integration
 """
-function sigma_los_parallel(model::JeansModel, R,
-                            parameter_sets::Vector{Dict},
-                            n_interp::Int = 10, fudge = 1e-6, interp = true, rmax = 1e2)
-    if typeof(collect(keys(parameter_sets[1]))) <: AbstractString
+function sigma_los_parallel(model::JeansModel, R, parameter_sets;
+                            n_interp::Int = 10, fudge = 1e-6, interp = true,
+                            rmax = 1e2)
+    if collect(keys(parameter_sets[1]))[1] isa AbstractString
         parameter_sets = [Dict(Symbol(k) => v for (k, v) in dict)
                           for dict in parameter_sets]
     end
