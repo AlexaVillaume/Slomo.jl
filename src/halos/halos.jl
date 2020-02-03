@@ -11,9 +11,8 @@ module Halos
 
 using Roots: fzero
 
-using Slomo.Constants: default_cosmo
 using Slomo.Utils: log_gauss
-using Slomo.CosmologyTools: Ωm, ρm, ρcrit
+using Slomo.CosmologyTools: Ωm, ρm, ρcrit, default_cosmo
 import Slomo.Models: DensityModel, mass, density, NotImplemented
 
 export virial_radius, virial_mass, scale_radius, concentration
