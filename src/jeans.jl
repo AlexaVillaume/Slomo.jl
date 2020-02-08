@@ -1,9 +1,9 @@
 """
 Jeans model with line-of-sight velocity dispersion predictions.
 
-[`JeansModel`](@ref) : collection of mass model, tracer density model, and anisotropy model
-[`sigma_los`](@ref) : calculate the line-of-sight velocity dispersion
-[`kappa_los`](@ref) : calculate the line-of-sight velocity kurtosis
+* [`JeansModel`](@ref): collection of mass model, tracer density model, and anisotropy model
+* [`sigma_los`](@ref): calculate the line-of-sight velocity dispersion
+* [`kappa_los`](@ref): calculate the line-of-sight velocity kurtosis
 """
 module Jeans
 

@@ -1,11 +1,12 @@
 """
 Collection of anisotropy models.
 
-[`IsotropicModel`](@ref) : isotropic model
-
-[`ConstantBetaModel`](@ref) : constant beta model
-
-[`RSBetaModel`](@ref) : flexible beta model from Read & Steger
+* [`IsotropicModel`](@ref): isotropic model
+* [`ConstantBetaModel`](@ref): constant beta model
+* [`RSBetaModel`](@ref): flexible beta model from Read & Steger
+* [`beta`](@ref): orbital anisotropy profile
+* [`g_jeans`](@ref): integrating factor from Jeans equation
+* [`K_jeans`](@ref): Jeans projection kernel
 """
 module Anisotropy
 
@@ -31,7 +32,7 @@ end
 """
     g_jean(model::AnisotropyModel, r)
 
-Integrating factor when solving for ```math \\sigma_r^2```
+Integrating factor when solving for \$\\sigma_r^2\$
 """
 function g_jeans(model::AnisotropyModel, r)
     exp.(2.0 * integrate(x -> beta(model, x) / x, 1.0, r))
@@ -98,16 +99,17 @@ end
 Flexible velocity anisotropy model from Read & Steger 2017 (eq. 9)
 
 ```math
-\beta(r) = \beta_0 + (\beta_inf - \beta_0) / (1 + (r_\beta / r))^{n_\beta}
+\\beta(r) = \\beta_0 + (\\beta_\\infty - \\beta_0) / (1 + (r_\\beta / r))^{n_\\beta}
 ```
-beta0 : inner asymptotic anisotropy
-betaInf : outer asymptotic anisotropy
-rbeta : transition radius
-nbeta : transition sharpness, higher is a faster transition
 
-beta0 = 0, betaInf = 1, nbeta = 2 corresponds to the Osipkov-Merritt profile
+* `beta0`: inner asymptotic anisotropy
+* `betaInf`: outer asymptotic anisotropy
+* `rbeta`: transition radius
+* `nbeta`: transition sharpness, higher is a faster transition
 
-beta0 = 0, betaInf = 0.5, nbeta = 1 corresponds to the Mamon-Lokas profile
+`beta0, betaInf, nbeta = 0, 1, 2` corresponds to the Osipkov-Merritt profile
+
+`beta0, betaInf, nbeta = 0, 0.5, 1` corresponds to the Mamon-Lokas profile
 """
 struct RSBetaModel <: AnisotropyModel
     beta0

@@ -17,12 +17,6 @@ anisotropy_model = ConstantBetaModel()
 jean_model = JeansModel(mass_model, tracer_model, anisotropy_model)
 ```
 
-## Jeans modeling
-
-```@autodocs
-Modules = [Slomo.Jeans]
-```
-
 ## Index
 
 ```@index
