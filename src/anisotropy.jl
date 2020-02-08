@@ -1,10 +1,56 @@
-import Slomo.Models: AnisotropyModel, beta, K_jeans, g_jeans
+"""
+Collection of anisotropy models.
+
+[`IsotropicModel`](@ref) : isotropic model
+
+[`ConstantBetaModel`](@ref) : constant beta model
+
+[`RSBetaModel`](@ref) : flexible beta model from Read & Steger
+"""
+module Anisotropy
+
 import Slomo.Utils: B_inc, gamma
+import Slomo.Models: Model
+export IsotropicModel, ConstantBetaModel, RSBetaModel, beta
 
-#==============
-Isotropic model
-==============#
+abstract type AnisotropyModel <: Model end
 
+"""
+    beta(model::AnisotropyModel, r)
+
+Orbital anisotropy as a function of radius.  The orbital anisotropy is defined as 
+
+```math
+\\beta = 1 - \\sigma_\\theta^2 / \\sigma_r^2
+```
+"""
+function beta(model::AnisotropyModel, r)
+    throw(NotImplemented("no defined beta profile"))
+end
+
+"""
+    g_jean(model::AnisotropyModel, r)
+
+Integrating factor when solving for ```math \\sigma_r^2```
+"""
+function g_jeans(model::AnisotropyModel, r)
+    exp.(2.0 * integrate(x -> beta(model, x) / x, 1.0, r))
+end
+
+"""
+    K_jeans(model::AnisotropyModel, r, R)
+
+Jeans projection kernel for an anisotropy model.
+"""
+function K_jeans(model::AnisotropyModel, r, R)
+    throw(NotImplemented("no defined Jeans Kernel"))
+end
+
+"""
+    IsotropicModel()
+
+Parameter-less model representing an isotropic system (i.e. beta = 0).
+"""
 struct IsotropicModel <: AnisotropyModel end
 
 beta(model::IsotropicModel, r) = zeros(size(r))
@@ -15,10 +61,12 @@ end
 
 g_jeans(model::IsotropicModel, r) = ones(size(r))
 
-#==================
-Constant beta model
-==================#
 
+"""
+    ConstantBetaModel(beta)
+
+Model that assumes beta is constant with galactocentric radius.
+"""
 struct ConstantBetaModel <: AnisotropyModel
     beta::Float64
 end
@@ -43,29 +91,29 @@ K_jeans(model::ConstantBetaModel, r, R) = begin
     return 0.5 * u .^ (2.0 * β - 1.0) .* (term1 .+ term2 .+ term3)
 end
 
-#==================
-Read & Steger model
-==================#
 
 """
+    RSBetaModel(beta0, betaInf, rbeta, nbeta)
+
 Flexible velocity anisotropy model from Read & Steger 2017 (eq. 9)
 
-β(r) = β_0 + (β_inf - β_0) / (1 + (r_β / r)^n_β)
-    
-    beta0 : inner asymptotic anisotropy
-    betaInf : outer asymptotic anisotropy
-    rbeta : transition radius
-    nbeta : transition sharpness, higher is a faster transition
+```math
+\beta(r) = \beta_0 + (\beta_inf - \beta_0) / (1 + (r_\beta / r))^{n_\beta}
+```
+beta0 : inner asymptotic anisotropy
+betaInf : outer asymptotic anisotropy
+rbeta : transition radius
+nbeta : transition sharpness, higher is a faster transition
 
-beta0 = 0, betaInf = 1, nbeta = 2 is the Osipkov-Merritt profile
+beta0 = 0, betaInf = 1, nbeta = 2 corresponds to the Osipkov-Merritt profile
 
-beta0 = 0, betaInf = 0.5, nbeta = 1 is the Mamon-Lokas profile
+beta0 = 0, betaInf = 0.5, nbeta = 1 corresponds to the Mamon-Lokas profile
 """
 struct RSBetaModel <: AnisotropyModel
-    beta0::Float64
-    betaInf::Float64
-    rbeta::Float64
-    nbeta::Float64
+    beta0
+    betaInf
+    rbeta
+    nbeta
 end
 
 RSBetaModel() = RSBetaModel(0.0, 0.5, 10.0, 1.0)
@@ -82,4 +130,4 @@ g_jeans(model::RSBetaModel, r) = begin
     return @. r ^ (2.0 * β_inf) * ((r_β / r)^n + 1.0) ^ (2.0 * Δβ / n)
 end
 
-
+end

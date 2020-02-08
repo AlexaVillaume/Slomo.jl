@@ -1,23 +1,75 @@
+"""
+Jeans model with line-of-sight velocity dispersion predictions.
+
+[`JeansModel`](@ref) : collection of mass model, tracer density model, and anisotropy model
+[`sigma_los`](@ref) : calculate the line-of-sight velocity dispersion
+[`kappa_los`](@ref) : calculate the line-of-sight velocity kurtosis
+"""
+module Jeans
+
 using Interpolations: LinearInterpolation
 using DifferentialEquations
 
-using Slomo.Models: update, JeansModel, NotImplemented, has_analytic_profile
-using Slomo.Models: mass, density, density2d, K_jeans, g_jeans, beta
+using Slomo.Models: Model, DensityModel, NotImplemented
+using Slomo.Models: has_analytic_profile, mass, density, density2d
+using Slomo.Anisotropy: AnisotropyModel, K_jeans, g_jeans, beta
 using Slomo.Constants: G
 using Slomo.Integrate: solve, integrate
 
-"""
-Calculate the line-of-sight velocity dispersion by
-numerically integrating the spherical Jeans equations.
+import Slomo.Models: update
 
-    model : potential and tracer models
-    R : projected radii in kpc
-    n_interp : number of points on the interpolation grid for the moment
+export JeansModel, sigma_los, sigma_los_parallel, kappa_los
+
+"""
+    JeansModel(mass_model, tracer_model, anisotropy_model)
+
+Represents the key ingredients for the Jeans modeling.  The first argument can be an array
+of `DensityModel` instances, in which case we will consider the mass model to be the sum of
+all its components.  The second argument refers to the density profile of the kinematic 
+tracer population (e.g., the stars or star clusters).
+"""
+struct JeansModel <: Model
+    mass_model::Array{DensityModel, 1}
+    density_model::DensityModel
+    anisotropy_model::AnisotropyModel
+end
+
+JeansModel(mass_model::DensityModel,
+           density_model::DensityModel,
+           anisotropy_model::AnisotropyModel) = begin
+               JeansModel([mass_model], density_model, anisotropy_model)
+           end
+
+update(model::JeansModel; parameters...) = begin
+    JeansModel(update(model.mass_model; parameters...),
+               update(model.density_model; parameters...),
+               update(model.anisotropy_model; parameters...))
+end
+
+"""
+    sigma_los(model::JeansModel, R; <keyword arguments>, parameters...)
     
-    parameters : keywords to pass on to mass and tracer models
+Calculate the line-of-sight velocity dispersion by numerically integrating the 
+spherical Jeans equation.
+
+# Examples
+```julia
+model = JeansModel(NFWModel(), SersicModel(), ConstantBetaModel())
+R = collect(1:0.5:10)
+sigma = sigma_los(model, R)
+```
+
+# Arguments
+- `n_interp::Int = 10`: number of points on the interpolation grid
+- `fudge::Real = 1e-6`: fudge factor for tweaking integration bounds
+- `interp::Bool = true`: whether or not to interpolate from a grid of R
+- `rmax::Real = 1e2`: maximum radius (in kpc) for integrating the Jeans equation
+- `parameters`: keywords used to update JeansModel parameter values
+
+See also: [`sigma_los_parallel`](@ref), [`kappa_los`](@ref)
 """
 function sigma_los(model::JeansModel, R;
-                   n_interp::Int = 10, fudge = 1e-6, interp = true, rmax = 1e2,
+                   n_interp::Int = 10, fudge::Real = 1e-6, interp::Bool = true, rmax::Real = 1e2,
                    parameters...)
     
     # update models with new parameters
@@ -71,15 +123,36 @@ function sigma_los(model::JeansModel, R;
     end
 end
 
-"""
-Use multi-threading to map out the integration to different threads.
 
-parameter_sets should be an array of dictionaries containing parameter values
-to use for the integration
+"""
+    sigma_los_parallel(model::JeansModel, R, parameter_sets; <keyword arguments>)
+
+Calculate the line-of-sight velocity dispersion by numerically integrating the 
+spherical Jeans equation in parallel for different sets of parameters.
+
+`parameter_sets` should be a list of dictionaries where each dictionary contains
+an update to the model parameters.
+
+# Examples
+```julia
+model = JeansModel(NFWModel(), SersicModel(), ConstantBetaModel())
+R = collect(1:0.5:10)
+betas = collect(0.1:0.1:0.9)
+parameter_sets = [Dict(:beta => b) for b in betas]
+sigmas = sigma_los(model, R, parameter_sets)
+```
+
+# Arguments
+- `n_interp::Int = 10`: number of points on the interpolation grid
+- `fudge::Real = 1e-6`: fudge factor for tweaking integration bounds
+- `interp::Bool = true`: whether or not to interpolate from a grid of R
+- `rmax::Real = 1e2`: maximum radius (in kpc) for integrating the Jeans equation
+
+See also: [`sigma_los`](@ref)
 """
 function sigma_los_parallel(model::JeansModel, R, parameter_sets;
-                            n_interp::Int = 10, fudge = 1e-6, interp = true,
-                            rmax = 1e2)
+                            n_interp::Int = 10, fudge::Real = 1e-6,
+                            interp::Bool = true, rmax::Real = 1e2)
     if collect(keys(parameter_sets[1]))[1] isa AbstractString
         parameter_sets = [Dict(Symbol(k) => v for (k, v) in dict)
                           for dict in parameter_sets]
@@ -103,9 +176,37 @@ spherical Jeans equations.
     parameters : keywords to pass on to mass and tracer models
     return_sigma : if true, will return both excess kurtosis and dispersion
 """
+
+"""
+    kappa_los(model::JeansModel, R; <keyword arguments>, parameters...)
+    
+Calculate the line-of-sight velocity kurtosis by numerically integrating the 
+spherical Jeans equations.
+
+# Examples
+```julia
+model = JeansModel(NFWModel(), SersicModel(), ConstantBetaModel())
+R = collect(1:0.5:10)
+kappa = kappa_los(model, R)
+```
+
+# Arguments
+- `n_interp::Int = 10`: number of points on the interpolation grid
+- `fudge::Real = 1e-6`: fudge factor for tweaking integration bounds
+- `interp::Bool = true`: whether or not to interpolate from a grid of R
+- `return_sigma::Bool = false`: whether or not to additionally return the velocity dispersion
+- `rmax::Real = 1e2`: maximum radius (in kpc) for integrating the Jeans equation
+- `parameters`: keywords used to update JeansModel parameter values
+
+!!! warning
+    This is only valid for the `ConstantBetaModel` anisotropy model.  Using
+    some other anisotropy model will give nonsense results.
+
+See also: [`sigma_los`](@ref)
+"""
 function kappa_los(model::JeansModel, R;
-                   n_interp::Int = 10, fudge = 1e-6, interp = true,
-                   return_sigma = false, rmax = 1e2,
+                   n_interp::Int = 10, fudge::Real = 1e-6, interp::Bool = true,
+                   return_sigma::Bool = false, rmax::Real = 1e2,
                    parameters...)
     # update models with new parameters
     if length(keys(parameters)) > 0
@@ -189,7 +290,13 @@ function kappa_los(model::JeansModel, R;
         return kgrid
     end
 end
-       
+
+"""
+    integral_from_kernel(Rgrid, M, ρ, K; <keyword arguments>)
+
+Compute the outer Jeans integral for a model which has an analytic form for the
+Jeans projection kernel.
+"""
 function integral_from_kernel(Rgrid, M, ρ, K; fudge = 1e-6, rmax = 1e2)
     integral = zeros(size(Rgrid))
     for (i, Ri) in enumerate(Rgrid)
@@ -200,7 +307,13 @@ function integral_from_kernel(Rgrid, M, ρ, K; fudge = 1e-6, rmax = 1e2)
     return integral    
 end
 
-function integral_from_vr2(Rgrid::Array{Float64, 1}, M, ρ, β, g; fudge = 1e-6, rmax = 1e2)
+"""
+    integral_from_vr2(Rgrid, M, ρ, K; <keyword arguments>)
+
+Compute the double Jeans integral for a model which has no analytic form for the
+Jeans projection kernel.
+"""
+function integral_from_vr2(Rgrid, M, ρ, β, g; fudge = 1e-6, rmax = 1e2)
     
     rmin = minimum(Rgrid)
     
@@ -226,3 +339,4 @@ function integral_from_vr2(Rgrid::Array{Float64, 1}, M, ρ, β, g; fudge = 1e-6,
     return integral
 end
 
+end

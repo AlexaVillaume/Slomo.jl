@@ -1,12 +1,21 @@
+"""
+Collection of tracer density models.
+
+[`SersicModel`](@ref) : Representation of a Sersic surface density profile
+"""
+module Tracers
+
 import Slomo.Models: DensityModel, mass, density, density2d
 import Slomo.Utils: gamma, gamma_inc
+
+export SersicModel
 
 """
 'b' parameter in the Sersic function, from the Ciotti & Bertin (1999) approximation.
 
 n is the Sersic index
 """
-function b_cb(n::Float64)::Float64
+function b_cb(n)
     -1. / 3 + 2. * n + 4 / (405. * n) + 46 / (25515. * n^2)
 end
 
@@ -15,7 +24,7 @@ end
 
 n is the Sersic index
 """
-function p_ln(n::Float64)::Float64
+function p_ln(n)
     1. - 0.6097 / n + 0.05463 / n^2
 end
 
@@ -27,7 +36,7 @@ Surface density for Sersic model.
     n : index
     Mtot : total mass
 """
-function s_sersic(R, Re::Float64, n::Float64, Mtot::Float64)
+function s_sersic(R, Re, n, Mtot)
     bn = b_cb(n)
     s0 = Mtot * bn ^ (2 * n) / (2π * n * Re ^ 2 * gamma(2 * n))
     return s0 * @. exp(-bn * (R / Re) ^ (1.0 / n))
@@ -41,7 +50,7 @@ Volume density for Sersic model.
     n : index
     Mtot : total mass
 """
-function rho_sersic(r, Re::Float64, n::Float64, Mtot::Float64)
+function rho_sersic(r, Re, n, Mtot)
     bn = b_cb(n)
     pn = p_ln(n)
     x = r / Re
@@ -57,7 +66,7 @@ Mass enclosed within deprojected radius for the Sersic model.
     n : index
     Mtot : total mass
 """
-function M_sersic(r, Re::Float64, n::Float64, Mtot::Float64)
+function M_sersic(r, Re, n, Mtot)
     pn = p_ln(n)
     bn = b_cb(n)
     alpha = (3 - pn) * n
@@ -65,10 +74,23 @@ function M_sersic(r, Re::Float64, n::Float64, Mtot::Float64)
     return @. Mtot * gamma_inc(alpha, x)
 end
 
+"""
+    SersicModel(Re, n, Mtot)
+
+Representation of a Sersic surface density profile.
+
+* `Re` is the effective radius in kpc.
+* `n` is the Sersic index
+* `Mtot` is the total mass associated to the profile.
+
+For the purposes of using the `SersicModel` to track the tracer population's
+density distribution, `Mtot` is somewhat arbitrary.  For using it as a component
+of the total mass profile, this should take units of solar masses.
+"""
 struct SersicModel <: DensityModel
-    Re::Float64
-    n::Float64
-    Mtot::Float64
+    Re
+    n
+    Mtot
 end
 
 SersicModel(Re, n) = SersicModel(Re, n, 1.0)
@@ -86,5 +108,4 @@ function mass(model::SersicModel, r)
     return M_sersic(r, model.Re, model.n, model.Mtot)
 end
 
-
-    
+end

@@ -6,12 +6,15 @@ include("cosmology.jl")
 include("integrate.jl")
 include("models.jl")
 include("halos/halos.jl")
-include("sersic.jl")
+include("tracers.jl")
 include("anisotropy.jl")
 include("jeans.jl")
 
 using Slomo.Models
 using Slomo.Halos
+using Slomo.Tracers
+using Slomo.Anisotropy
+using Slomo.Jeans
 
 export Halos, SersicModel, ConstantBetaModel, RSBetaModel, JeansModel
 export mass, density, density2d, beta, update
