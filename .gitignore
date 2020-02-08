@@ -9,3 +9,5 @@ deps/deps.jl
 *.ipynb
 
 Manifest.toml
+build
+docs/build
