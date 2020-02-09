@@ -1,5 +1,3 @@
-using Slomo.Utils: gamma, gamma_inc
-
 #================================================
 Einasto model, Einasto 1965
 http://adsabs.harvard.edu/abs/1965TrAlm...5...87E

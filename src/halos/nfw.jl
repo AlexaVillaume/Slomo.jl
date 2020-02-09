@@ -1,16 +1,13 @@
-using Slomo.Utils: hyp2f1
-
-#================================================
-NFW model, Navarro, Frenk, & White 1997
-http://adsabs.harvard.edu/abs/1997ApJ...490..493N
-================================================#
-
 """
-Enclosed mass for NFW model.
+    M_NFW(r, rs, rhos)
 
-    r : radii in kpc
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
+Compute the enclosed mass for NFW model.
+
+[Navarro, Frenk, and White (1997)](http://adsabs.harvard.edu/abs/1997ApJ...490..493N)
+
+* `r`: radii in kpc
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
 """
 function M_NFW(r, rs, rhos)
     x = r / rs
@@ -19,11 +16,13 @@ function M_NFW(r, rs, rhos)
 end
 
 """
-Local volume density for NFW model.
+    rho_nfw(r, rs, rhos)
 
-    r : radii in kpc
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
+Compute the local volume density for NFW model.
+
+* `r`: radii in kpc
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
 """
 function rho_NFW(r, rs, rhos)
     x = r / rs
@@ -31,11 +30,13 @@ function rho_NFW(r, rs, rhos)
 end
 
 """
-Linear density derivative for NFW model.
+    drhodr_NFW(r, rs, rhos)
 
-    r : radii in kpc
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
+Compute the linear density derivative for NFW model.
+
+* `r`: radii in kpc
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
 """
 function drhodr_NFW(r, rs, rhos)
     x = r / rs
@@ -43,10 +44,12 @@ function drhodr_NFW(r, rs, rhos)
 end
 
 """
-NFW halo density model.
+    NFWModel(rs, rhos)
 
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
+NFW halo density model.  Default constructor will make a halo with Mvir = 1e12 Msun.
+
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
 """
 struct NFWModel <: HaloModel
     rs::Float64
@@ -59,6 +62,16 @@ density(halo::NFWModel, r) = rho_NFW(r, halo.rs, halo.rhos)
 mass(halo::NFWModel, r) = M_NFW(r, halo.rs, halo.rhos)
 scale_radius(halo::NFWModel) = halo.rs
 
+"""
+    NFW_from_virial(Mvir, cvir; <keyword arguments>)
+
+Construct an NFW halo from the virial mass and concentration.
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+"""
 function NFW_from_virial(Mvir, cvir;
                          mdef = default_mdef,
                          cosmo = default_cosmo,
@@ -72,22 +85,17 @@ end
 #================================================
 Generalized NFW model (gNFW)
 
-Instance of a generalized Hernquist model with
-the transition parameter α = 1, the outer slope 
-β = 3, and the inner slope, γ, left as a free 
-parameter.  See Hernquist 1990 and Zhao 1996.
-
-http://adsabs.harvard.edu/abs/1990ApJ...356..359H
-http://adsabs.harvard.edu/abs/1996MNRAS.278..488Z
 ================================================#
 
 """
-Enclosed mass for gNFW model.
+    M_GNFW(r, rs, rhos, gamma)
 
-    r : radii in kpc
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    gamma : negative of inner density log slope
+Compute the enclosed mass for gNFW model.
+
+* `r`: radii in kpc
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
+* `gamma`: negative of inner density log slope
 """
 function M_GNFW(r, rs, rhos, gamma)
     omega = 3.0 - gamma
@@ -97,12 +105,14 @@ function M_GNFW(r, rs, rhos, gamma)
 end
 
 """
-Local volume density for NFW model.
+    rho_GNFW(r, rs, rhos, gamma)
 
-    r : radii in kpc
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    gamma : negative of inner density log slope
+Compute the local volume density for NFW model.
+
+* `r`: radii in kpc
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
+* `gamma`: negative of inner density log slope
 """
 function rho_GNFW(r, rs, rhos, gamma)
     x = r / rs
@@ -110,11 +120,18 @@ function rho_GNFW(r, rs, rhos, gamma)
 end
 
 """
-gNFW halo density model.
+    GNFWModel(rs, rhos, gamma)
 
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    gamma : negative of inner density log slope    
+Generalized NFW (gNFW) halo density model.  This is a specific instance of a generalized
+Hernquist (i.e. αβγ) model with the transition parameter α = 1, the outer slope β = 3, and 
+the inner slope, γ, left as a free parameter.
+
+[Hernquist 1990](http://adsabs.harvard.edu/abs/1990ApJ...356..359H)
+[Zhao 1996](http://adsabs.harvard.edu/abs/1996MNRAS.278..488Z)
+
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
+* `gamma`: negative of inner density log slope
 """
 struct GNFWModel <: HaloModel
     rs::Float64
@@ -128,6 +145,16 @@ density(halo::GNFWModel, r) = rho_GNFW(r, halo.rs, halo.rhos, halo.gamma)
 mass(halo::GNFWModel, r) = M_GNFW(r, halo.rs, halo.rhos, halo.gamma)
 scale_radius(halo::GNFWModel) = halo.rs
 
+"""
+    GNFW_from_virial(Mvir, cvir, gamma; <keyword arguments>)
+
+Construct a gNFW halo from the virial mass and concentration.
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+"""
 function GNFW_from_virial(Mvir, cvir, gamma;
                          mdef = default_mdef,
                          cosmo = default_cosmo,
@@ -138,18 +165,17 @@ function GNFW_from_virial(Mvir, cvir, gamma;
     return GNFWModel(rs, rhos, gamma)
 end
 
-#================================================
-coreNFW model, Read, Agertz, & Collins 2016
-http://adsabs.harvard.edu/abs/2016MNRAS.459.2573R
-================================================#
-
 """
-coreNFW halo density model
+    CoreNFWModel(rs, rhos, rc, nc)
 
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    rc : core radius in kpc
-    nc : core index (0 -> no core, 1 -> full core)
+coreNFW halo density model from Read et. al (2016)
+
+[Read, Agertz, and Collins 2016](http://adsabs.harvard.edu/abs/2016MNRAS.459.2573R)
+
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
+* `rc`: core radius in kpc
+* `nc`: core index (0 -> no core, 1 -> full core)
 """
 struct CoreNFWModel <: HaloModel
     rs::Float64
@@ -176,12 +202,19 @@ mass(halo::CoreNFWModel, r) = begin
 end
 
 """
-Construct a CoreNFWModel from the scaling relations in Read et al. 2016.
+    CoreNFW_from_virial(Mvir, cvir, Re, t_sf; <keyword arguments>)
 
-    Mvir : virial mass in Msun
-    cvir : halo concentration
-    Re : effective radius of stellar distribution, in kpc
-    t_sf : time since start of star formation, in Gyr
+Construct a CoreNFWModel from the scaling relations in Read et al. (2016).
+
+* `Mvir`: virial mass in Msun
+* `cvir`: halo concentration
+* `Re`: effective radius of stellar distribution, in kpc
+* `t_sf`: time since start of star formation, in Gyr
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
 """
 function CoreNFW_from_virial(Mvir, cvir, Re, t_sf;
                              mdef = default_mdef,

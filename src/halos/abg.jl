@@ -1,25 +1,14 @@
-using Slomo.Utils: hyp2f1
-
-#================================================
-alpha-beta-gamma model
-
-A double power law where -γ is the inner log 
-slope, -β is the outer log slope, and α is the 
-sharpness of the transition.
-
-See e.g., Merritt et al. 2006.
-http://adsabs.harvard.edu/abs/2006AJ....132.2685M
-================================================#
-
 """
-Enclosed mass for αβγ model.
+    M_ABG(r, rs, rhos, alpha, beta, gamma)
 
-    r : radii in kpc
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    alpha : transition sharpness
-    beta : negative outer log slope
-    gamma : negative inner log slope
+Compute the enclosed mass profile for an αβγ model.
+
+* `r`: radii in kpc
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
+* `alpha`: transition sharpness
+* `beta`: negative outer log slope
+* `gamma`: negative inner log slope
 """
 function M_ABG(r, rs, rhos, alpha, beta, gamma)
     x = r / rs
@@ -33,14 +22,16 @@ function M_ABG(r, rs, rhos, alpha, beta, gamma)
 end
 
 """
-Local volume density for αβγ model.
+    rho_ABG(r, rs, rhos, alpha, beta, gamma)
 
-    r : radii in kpc
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    alpha : transition sharpness
-    beta : negative outer log slope
-    gamma : negative inner log slope
+Compute the local volume density for an αβγ model.
+
+* `r`: radii in kpc
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
+* `alpha`: transition sharpness
+* `beta`: negative outer log slope
+* `gamma`: negative inner log slope
 """
 function rho_ABG(r, rs, rhos, alpha, beta, gamma)
     x = r / rs
@@ -48,14 +39,16 @@ function rho_ABG(r, rs, rhos, alpha, beta, gamma)
 end
 
 """
-Linear density derivative for αβγ model.
+    drhodr_ABG(r, rs, rhos, alpha, beta, gamma)
 
-    r : radii in kpc
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    alpha : transition sharpness
-    beta : negative outer log slope
-    gamma : negative inner log slope
+Compute the linear density derivative for αβγ model.
+
+* `r`: radii in kpc
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
+* `alpha`: transition sharpness
+* `beta`: negative outer log slope
+* `gamma`: negative inner log slope
 """
 function drhodr_ABG(r, rs, rhos, alpha, beta, gamma)
     x = r / rs
@@ -68,13 +61,17 @@ function drhodr_ABG(r, rs, rhos, alpha, beta, gamma)
 end
 
 """
-ABG halo density model.
+    ABGModel(rs, rhos, alpha, beta, gamma)
 
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    alpha : transition sharpness
-    beta : negative outer log slope
-    gamma : negative inner log slope
+αβγ double-power law density model.
+
+[Merritt et al. 2006](http://adsabs.harvard.edu/abs/2006AJ....132.2685M)
+
+* `rs`: scale radius in kpc
+* `rhos`: scale density in Msun / kpc3
+* `alpha`: transition sharpness
+* `beta`: negative outer log slope
+* `gamma`: negative inner log slope
 """
 struct ABGModel <: HaloModel
     rs::Float64
@@ -95,6 +92,16 @@ scale_radius(halo::ABGModel) = begin
 end
 
 
+"""
+    ABG_from_virial(Mvir, cvir, alpha, beta, gamma; <keyword arguments>)
+
+Construct a ABGModel halo from the virial mass, concentration, and shape parameters.
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+"""
 function ABG_from_virial(Mvir, cvir, alpha, beta, gamma;
                          mdef = default_mdef,
                          cosmo = default_cosmo,
@@ -106,6 +113,17 @@ function ABG_from_virial(Mvir, cvir, alpha, beta, gamma;
     return ABGModel(rs, rhos, alpha, beta, gamma)
 end
 
+"""
+    ABG_from_virial(Mvir, cvir, Mstar; <keyword arguments>)
+
+Construct a ABGModel halo from the virial mass, concentration, and stellar mass, using the
+scaling relations from DiCintio et al. 2014
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+"""
 function ABG_from_virial(Mvir, cvir, Mstar;
                          mdef = default_mdef,
                          cosmo = default_cosmo,

@@ -1,6 +1,6 @@
 # Slomo.jl Documentation
 
-`Slomo.jl` is a Julia package for modeling the dynamics of spherically symmetric (e.g., slow-rotating) galaxies.
+`Slomo.jl` is a Julia package for modeling the dynamics of spherically symmetric stellar systems.
 
 ```@contents
 ```

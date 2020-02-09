@@ -11,30 +11,34 @@ import Slomo.Utils: gamma, gamma_inc
 export SersicModel
 
 """
-'b' parameter in the Sersic function, from the Ciotti & Bertin (1999) approximation.
+    b_cb(n)
 
-n is the Sersic index
+Compute the "b" parameter in the Sersic function, from the Ciotti & Bertin (1999) 
+approximation.  `n` is the Sersic index.
 """
 function b_cb(n)
     -1. / 3 + 2. * n + 4 / (405. * n) + 46 / (25515. * n^2)
 end
 
 """
-'p' parameter in fitting deprojected Sersic function, from Lima Neto et al. (1999).
+    p_ln(n)
 
-n is the Sersic index
+Compute the "p" parameter in fitting deprojected Sersic function, from 
+Lima Neto et al. (1999).  `n` is the Sersic index
 """
 function p_ln(n)
     1. - 0.6097 / n + 0.05463 / n^2
 end
 
 """
-Surface density for Sersic model.
+    s_sersic(R, Re, n, Mtot)
 
-    R : projected (2d) radii in kpc
-    Re : effective radius in kpc
-    n : index
-    Mtot : total mass
+Compute the surface density profile for Sersic model.
+
+* `R`: projected (2d) radii in kpc
+* `Re`: effective radius in kpc
+* `n`: index
+* `Mtot`: total mass
 """
 function s_sersic(R, Re, n, Mtot)
     bn = b_cb(n)
@@ -43,12 +47,14 @@ function s_sersic(R, Re, n, Mtot)
 end
 
 """
-Volume density for Sersic model.
+    rho_sersic(r, Re, n, Mtot)
 
-    r : deprojected (3d) radii in kpc
-    Re : effective radius in kpc
-    n : index
-    Mtot : total mass
+Compute the volume density profile for Sersic model.
+
+* `r`: deprojected (3d) radii in kpc
+* `Re`: effective radius in kpc
+* `n`: index
+* `Mtot`: total mass
 """
 function rho_sersic(r, Re, n, Mtot)
     bn = b_cb(n)
@@ -59,12 +65,14 @@ function rho_sersic(r, Re, n, Mtot)
 end
 
 """
-Mass enclosed within deprojected radius for the Sersic model.
+    M_sersic(r, Re, n, Mtot)
 
-    r : deprojected (3d) radii in kpc
-    Re : effective radius in kpc
-    n : index
-    Mtot : total mass
+Compute the enclosed mass within deprojected radius for the Sersic model.
+
+* `r`: deprojected (3d) radii in kpc
+* `Re`: effective radius in kpc
+* `n`: index
+* `Mtot`: total mass
 """
 function M_sersic(r, Re, n, Mtot)
     pn = p_ln(n)
@@ -79,9 +87,9 @@ end
 
 Representation of a Sersic surface density profile.
 
-* `Re` is the effective radius in kpc.
-* `n` is the Sersic index
-* `Mtot` is the total mass associated to the profile.
+* `Re`: the effective radius in kpc.
+* `n`: the Sersic index
+* `Mtot`: the total mass associated to the profile.
 
 For the purposes of using the `SersicModel` to track the tracer population's
 density distribution, `Mtot` is somewhat arbitrary.  For using it as a component
