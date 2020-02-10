@@ -1,21 +1,21 @@
 # Slomo.jl Documentation
 
-`Slomo.jl` is a Julia package for modeling the dynamics of spherically symmetric stellar systems.
+Slomo is a Julia package for modeling the dynamics of spherically symmetric stellar systems.
+
+## Contents
 
 ```@contents
+Pages = ["install.md", "start.md", "examples.md", "public_api.md", "private_api.md"]
+Depth = 1
 ```
 
-## Getting started
+## Tutorial
 
-Install Julia and `Slomo.jl`: [Installing Slomo](@ref).
+* [Installing Slomo](@ref)
 
-```julia
-using Slomo
-mass_model = Halos.NFWModel()
-tracer_model = SersicModel()
-anisotropy_model = ConstantBetaModel()
-jean_model = JeansModel(mass_model, tracer_model, anisotropy_model)
-```
+* [Getting started](@ref)
+
+* [Examples](@ref)
 
 ## Index
 

@@ -1,5 +1,4 @@
-"""
-Collection of tracer density models.
+""" Collection of tracer density models.
 
 [`SersicModel`](@ref) : Representation of a Sersic surface density profile
 """
@@ -96,9 +95,9 @@ density distribution, `Mtot` is somewhat arbitrary.  For using it as a component
 of the total mass profile, this should take units of solar masses.
 """
 struct SersicModel <: DensityModel
-    Re
-    n
-    Mtot
+    Re::Float64
+    n::Float64
+    Mtot::Float64
 end
 
 SersicModel(Re, n) = SersicModel(Re, n, 1.0)

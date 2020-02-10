@@ -6,6 +6,9 @@ module Models
 using Slomo.Constants: G
 using Slomo.Integrate: solve, integrate
 
+export Model, DensityModel
+export update, density, density2d, mass
+
 struct NotImplemented <: Exception end
 
 abstract type Model end

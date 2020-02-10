@@ -21,6 +21,7 @@ from Planck 2018 (h = 0.6766, Neff = 3.046, OmegaM = 0.3111).
 # HaloModel subtypes
 * [`NFWModel`](@ref): Navarro, Frenk, and White (1997) profile
 * [`CoreNFWModel`](@ref): Core-NFW (Read et al. 2016) profile
+* [`GNFWModel`](@ref): generalized NFW model (i.e., αβγ where α = 1, β = 3)
 * [`ABGModel`](@ref): α-β-γ profile (double power law)
 * [`EinastoModel`](@ref): Einasto (1965) profile
 * [`SolNFWModel`](@ref): Soliton + NFW model (Marsh & Pop 2015)
@@ -40,11 +41,11 @@ using Slomo.CosmologyTools: Ωm, ρm, ρcrit, default_cosmo
 import Slomo.Models: DensityModel, mass, density, NotImplemented
 using Slomo.Utils: hyp2f1, gamma, gamma_inc
 
-
 export virial_radius, virial_mass, scale_radius, concentration
-export NFWModel, CoreNFWModel, ABGModel, EinastoModel, SolNFWModel, SolABGModel
-export NFW_from_virial, CoreNFW_from_virial, ABG_from_virial, SolNFW_from_virial, SolABG_from_virial
-export hmcr, shmr, abg_from_logshm
+export NFWModel, CoreNFWModel, ABGModel, GNFWModel, EinastoModel, SolNFWModel, SolABGModel
+export NFW_from_virial, CoreNFW_from_virial, ABG_from_virial, GNFW_from_virial, Einasto_from_virial
+export SolNFW_from_virial, SolABG_from_virial
+export hmcr, hmcr_prior, shmr, shmr_prior, abg_from_logshm
     
 const default_mdef = "200c"
 

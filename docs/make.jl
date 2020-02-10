@@ -7,14 +7,11 @@ makedocs(
     modules = [Slomo],
     doctest = false,
     pages = [
-	"Getting started" => "index.md",
+	"Home" => "index.md",
 	"Installation" => "install.md",
-        "Modules" => [
-	    "modules/models.md",
-	    "modules/tracers.md",
-	    "modules/halos.md",
-	    "modules/anisotropy.md",
-	    "modules/jeans.md"
-        ]
+        "Getting started" => "start.md",
+        "Examples" => "examples.md",
+        "Public API" => "public_api.md",
+        "Private API" => "private_api.md"
     ]
 )

@@ -1,6 +1,13 @@
 """
+    hmcr(Mvir; <keyword arguments>)
+
 Compute the expected halo concentration from halo mass using the relation of 
-Dutton & Maccio 2014 (equations 7, 10-13)
+Dutton & Maccio 2014 (equations 7, 10-13).
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
 """
 function hmcr(Mvir; mdef = default_mdef, cosmo = default_cosmo, z = 0.0)
     mdef == lowercase(strip(mdef))
@@ -18,15 +25,21 @@ function hmcr(Mvir; mdef = default_mdef, cosmo = default_cosmo, z = 0.0)
 end
 
 """
+    hmcr_prior(Mvir, cvir; <keyword arguments>)
+    
 Compute the probability of drawing a halo with virial parameters (Mvir, cvir),
 using the halo mass-concentration relation of Dutton & Maccio 2014.
 
-     sigma_logc : scatter in logc at fixed Mvir (in dex)
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+- `sigma_logc::Real = 0.16`: scatter in log_concentration at fixed Mvir (in dex)
 """
 function hmcr_prior(Mvir, cvir;
                     mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
                     sigma_logc = 0.16)
-    logc_expected = log10(hmcr(Mvir; mdef = mdef, cosmo = cosmo, z =z))
+    logc_expected = log10(hmcr(Mvir; mdef = mdef, cosmo = cosmo, z = z))
     logc = log10(cvir)
     return log_gauss(logc, logc_expected, sigma_logc)
 end
@@ -43,10 +56,17 @@ end
 
 
 """
+    shmr(Mvir; <keyword arguments>)
+
 Compute the expected stellar mass from halo mass using the relation of 
 Rodriguez-Puebla et al. 2017.
 
 See equations 25-33 for the functional form and 49 - 55 for the parameters.
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
 """
 function shmr(Mvir; z = 0.0, cosmo = default_cosmo, mdef = default_mdef)
 
@@ -96,9 +116,15 @@ function shmr(halo::HaloModel; mdef = default_mdef, z = 0.0, cosmo = default_cos
 end
 
 """
+    shmr_prior(Mvir, Mstar; <keyword arguments>)
+
 Compute the probability of drawing a halo mass and stellar mass pair (Mvir, Mstar).
 
-    sigma_logMstar : scatter in logMstar (dex)
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+- `sigma_logMstar::Real = 0.15` scatter in log_Mstar (in dex)
 """
 function shmr_prior(Mvir, Mstar;
                     mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
@@ -117,10 +143,22 @@ function shmr_prior(halo::HaloModel, Mstar;
 end
 
 """
-Computes the dimensionless peak height, ν = δ_crit(z) / σ(M, z), using the
-approximation of Dutton & Maccio 2014 for a Planck 2013 cosmology.
+    peak_height(Mvir; <keyword arguments>)
+
+Computes the dimensionless peak height,
+
+```math
+\\nu = \\delta_\\mathrm{crit}(z) / \\sigma(M, z)
+```
+
+using the approximation of Dutton & Maccio 2014 for a Planck 2013 cosmology.
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
 """
-function peak_height(Mvir, z; cosmo = default_cosmo, mdef="200c")
+function peak_height(Mvir; cosmo = default_cosmo, mdef="200c", z = 0.0)
     if mdef != "200c"
         throw("only implemented for 200c definition")
     end
@@ -130,7 +168,14 @@ function peak_height(Mvir, z; cosmo = default_cosmo, mdef="200c")
 end
 
 """
-α-ν relation of Gao+2008
+    alpha_peak(Mvir; <keyword arguments>)
+
+Compute the Einasto shape parameter from peak height using the relation of Gao+2008.
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
 """
 function alpha_peak(Mvir; z = 0.0, cosmo = default_cosmo, mdef = "200c")
     if mdef != "200c"
@@ -140,6 +185,19 @@ function alpha_peak(Mvir; z = 0.0, cosmo = default_cosmo, mdef = "200c")
     return @. 0.0095 * ν^2 + 0.155
 end
 
+"""
+    alpha_peak_prior(Mvir, alpha; <keyword arguments>)
+
+Compute the probability of drawing a halo with the given virial mass and Einasto shape
+parameter using the alpha-peak height relation of Gao et al. 2008.
+
+# Arguments
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+- `sigma0::Real = 0.16`: scatter (in dex) of Mvir at redshift z = 0
+- `sigmaz::Real = 0.03`: slope with redshift in scatter (in dex) of Mvir 
+"""
 function alpha_peak_prior(Mvir, alpha;
                           mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
                           sigma0 = 0.16, sigmaz = 0.03)
@@ -150,9 +208,9 @@ function alpha_peak_prior(Mvir, alpha;
 end
 
 """
-αβγ scalings with Mstar / Mhalo from DiCintio+2014a.
+    abg_from_logshm(logshm)
 
-logshm is log10(Mstar / Mvir)
+αβγ scalings with log10(Mstar / Mhalo) from DiCintio+2014a.
 """
 function abg_from_logshm(logshm)
     x = logshm

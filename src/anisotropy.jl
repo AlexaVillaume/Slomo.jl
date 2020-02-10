@@ -5,8 +5,6 @@ Collection of anisotropy models.
 * [`ConstantBetaModel`](@ref): constant beta model
 * [`RSBetaModel`](@ref): flexible beta model from Read & Steger
 * [`beta`](@ref): orbital anisotropy profile
-* [`g_jeans`](@ref): integrating factor from Jeans equation
-* [`K_jeans`](@ref): Jeans projection kernel
 """
 module Anisotropy
 
@@ -112,10 +110,10 @@ Flexible velocity anisotropy model from Read & Steger 2017 (eq. 9)
 `beta0, betaInf, nbeta = 0, 0.5, 1` corresponds to the Mamon-Lokas profile
 """
 struct RSBetaModel <: AnisotropyModel
-    beta0
-    betaInf
-    rbeta
-    nbeta
+    beta0::Float64
+    betaInf::Float64
+    rbeta::Float64
+    nbeta::Float64
 end
 
 RSBetaModel() = RSBetaModel(0.0, 0.5, 10.0, 1.0)

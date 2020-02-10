@@ -1,14 +1,23 @@
-#==========================================================
-Soliton NFW model, see Marsh & Pop 2015, Robles et al. 2019
-https://ui.adsabs.harvard.edu/#abs/2015MNRAS.451.2479M
-https://ui.adsabs.harvard.edu/#abs/arXiv:1807.06018
-==========================================================#
+"""
+    rho_sol(r, rsol, rhosol)
 
+Compute the local volume density for the soliton model.
+
+* `rsol`: soliton scale radius in kpc
+* `rhosol`: soliton scale density in kpc
+"""
 function rho_sol(r, rsol, rhosol)
     @. rhosol * (1.0 + (r / rsol)^2) ^ -8
 end
 
-# it's analytic!
+"""
+    M_sol(r, rsol, rhosol)
+
+Compute the enclosed mass for the soliton model.  It's analytic!
+
+* `rsol`: soliton scale radius in kpc
+* `rhosol`: soliton scale density in kpc
+"""
 function M_sol(r, rsol, rhosol)
     x = r / rsol
     t = atan.(x, 1.0)
@@ -24,15 +33,32 @@ function M_sol(r, rsol, rhosol)
     return @. factor * (term0 + term1 + term2 + term3 + term4 + term5 + term6 + term7)
 end
 
+"""
+    drhodr_sol(r, rsol, rhosol)
+
+Compute the linear density derivative for the soliton model.
+
+* `rsol`: soliton scale radius in kpc
+* `rhosol`: soliton scale density in kpc
+"""
 function drhodr_sol(r, rsol, rhosol)
     x = r / rsol
     return @. -16 * rhosol * x * (1.0 + x^2) ^ -9
 end
 
 """
-Calculate the axion mass from the soliton scale parameters.
-See Marsh & Pop 2015, equation 8.  Axion mass has units of 1e-22 eV.
-alpha_mp is the alpha fitting parameter from Marsh & Pop 2015
+    m22_from_sol(rsol, rhosol; <keyword arguments>)
+
+Calculate the axion mass from the soliton scale parameters. See Marsh & Pop 2015, 
+equation 8.  Axion mass has units of 1e-22 eV.  
+
+* `rsol`: soliton scale radius in kpc
+* `rhosol`: soliton scale density in kpc
+
+# Arguments
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+- `alpha_mp::Real = 0.23`: the alpha fitting parameter from Marsh & Pop 2015
 """
 function m22_from_sol(rsol, rhosol;
                       cosmo = default_cosmo, z = 0.0, alpha_mp = 0.23)
@@ -42,7 +68,17 @@ function m22_from_sol(rsol, rhosol;
 end
 
 """
+    rhosol_from_rsol(m22, rsol; <keyword arguments>)
+
 Calculate the scale density of the soliton core from m22 and the scale radius.
+
+* `m22`: ultralight axion mass in units of 1e-22 eV
+* `rsol`: soliton scale radius in kpc
+
+# Arguments
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+- `alpha_mp::Real = 0.23`: the alpha fitting parameter from Marsh & Pop 2015
 """
 function rhosol_from_rsol(m22, rsol;
                          cosmo = default_cosmo, z = 0.0, alpha_mp = 0.23)
@@ -51,15 +87,24 @@ function rhosol_from_rsol(m22, rsol;
 end
 
 """
-Calculate the scale radius of the soliton core from the halo mass scaling 
-relation (see Robles+2019)
+    rsol_from_Mvir(m22, Mvir)
+
+Calculate the scale radius of the soliton core from the halo mass scaling relation 
+(see Robles+2019).
 """
 function rsol_from_Mvir(m22, Mvir)
     rsol = 3.315 * 1.6 * (Mvir / 1e9)^(-1/3.) * m22^-1
 end
 
 """
+    matching_radius(rs, rhos, rsol, rhosol; <keyword arguments>)
+
 Compute the matching radius, repsilon, from the specified NFW and Sol parameters.
+
+# Arguments
+- `xstart::Real = 2.0`: factor of the soliton radius to start the search for the root
+- `rtol::Real = 1e-9`: relative error tolerance for the root finding
+- `maxevals:Int = 100`: maximum number of function evalutions for the root finding
 """
 function matching_radius(rs, rhos, rsol, rhosol;
                          xstart = 2.0, rtol = 1e-9, maxevals = 100)
@@ -73,15 +118,20 @@ function matching_radius(rs, rhos, rsol, rhosol;
 end
 
 """
+    SolNFWModel(rs, rhos, rsol, rhosol, repsilon)
+
 Soliton NFW model.  For consistency, the NFW density must match the soliton 
 density at repsilon.  If that is not the case, the constructor will update
 repsilon.
 
-    rs : NFW scale radius in kpc
-    rhos : NFW scale density in Msun / kpc3
-    rsol : soliton scale radius in kpc
-    rhosol : soliton scale density in kpc
-    repsilon : transition radius
+- [Marsh & Pop 2015](https://ui.adsabs.harvard.edu/#abs/2015MNRAS.451.2479M)
+- [Robles, Bullock, and Boylan-Kolchin 2019](https://ui.adsabs.harvard.edu/abs/2019MNRAS.483..289R/)
+
+* `rs`: NFW scale radius in kpc
+* `rhos`: NFW scale density in Msun / kpc3
+* `rsol`: soliton scale radius in kpc
+* `rhosol`: soliton scale density in kpc
+* `repsilon`: transition radius
 """
 struct SolNFWModel <: HaloModel
     rs::Float64
@@ -151,6 +201,20 @@ end
 
 scale_radius(halo::SolNFWModel) = halo.rs
 
+"""
+    SolNFW_from_virial(Mvir, cvir, m22; <keyword arguments>)
+
+Construct a Solition-NFW halo from the halo mass, concentration, and axion mass.
+
+# Arguments
+- `rsol = nothing`: for default, use the soliton size-halo mass scaling relationship
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+- `xstart::Real = 10.0`: factor of the scale radius to start the search for the root
+- `rtol::Real = 1e-2`: relative error tolerance for the root finding
+- `maxevals:Int = 100`: maximum number of function evalutions for the root finding
+"""
 function SolNFW_from_virial(Mvir, cvir, m22;
                             rsol = nothing,
                             mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
@@ -172,14 +236,6 @@ function SolNFW_from_virial(Mvir, cvir, m22;
     return SolNFWModel(rs, rhos, rsol, rhosol, repsilon)
 end
 
-#==============================================
-Soliton αβγ model, see DiCintio+2014a
-Soliton profile + general double power law halo
-==============================================#
-
-"""
-Compute the matching radius, repsilon, from the specified αβγ and Sol parameters.
-"""
 function matching_radius(rs, rhos, alpha, beta, gamma, rsol, rhosol;
                          xstart = 2.0, rtol = 1e-6, maxevals = 100)
     ρ1(r) = rho_ABG(r, rs, rhos, alpha, beta, gamma)
@@ -192,19 +248,20 @@ function matching_radius(rs, rhos, alpha, beta, gamma, rsol, rhosol;
 end
 
 """
-Soliton αβγ model.  For consistency, the αβγ density profile must match the 
+    SolABGModel(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon)
+
+Soliton + αβγ model.  For consistency, the αβγ density profile must match the 
 soliton density profile at repsilon.  If that is not the case, the constructor 
 will update repsilon.
 
-    rs : scale radius in kpc
-    rhos : scale density in Msun / kpc3
-    alpha : transition sharpness
-    beta : negative outer log slope
-    gamma : negative inner log slope
-    rsol : soliton scale radius in kpc
-    rhosol : soliton scale density in kpc
-    repsilon : transition radius
-
+* `rs`: NFW scale radius in kpc
+* `rhos`: NFW scale density in Msun / kpc3
+* `alpha`: transition sharpness
+* `beta`: negative outer log slope
+* `gamma`: negative inner log slope
+* `rsol`: soliton scale radius in kpc
+* `rhosol`: soliton scale density in kpc
+* `repsilon`: transition radius
 """
 struct SolABGModel <: HaloModel
     rs::Float64
@@ -280,6 +337,21 @@ scale_radius(halo::SolABGModel) = begin
     ((2 - halo.gamma) / (halo.beta - 2)) ^ (1 / halo.alpha) * halo.rs
 end
 
+"""
+    SolABG_from_virial(Mvir, cvir, alpha, beta, gamma, m22; <keyword arguments>)
+
+Construct a Soliton + αβγ halo from the halo mass, concentration, shape parameters, and 
+axion mass.
+
+# Arguments
+- `rsol = nothing`: for default, use the soliton size-halo mass scaling relationship
+- `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
+- `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
+- `z::Real = 0.0`: redshift at which to evaluate the overdensity
+- `xstart::Real = 10.0`: factor of the scale radius to start the search for the root
+- `rtol::Real = 1e-2`: relative error tolerance for the root finding
+- `maxevals:Int = 100`: maximum number of function evalutions for the root finding
+"""
 function SolABG_from_virial(Mvir, cvir, alpha, beta, gamma, m22;
                             rsol = nothing,
                             mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
@@ -301,6 +373,3 @@ function SolABG_from_virial(Mvir, cvir, alpha, beta, gamma, m22;
 
     return SolABGModel(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon)
 end
-
-
-

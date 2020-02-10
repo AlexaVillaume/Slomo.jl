@@ -126,8 +126,8 @@ Generalized NFW (gNFW) halo density model.  This is a specific instance of a gen
 Hernquist (i.e. αβγ) model with the transition parameter α = 1, the outer slope β = 3, and 
 the inner slope, γ, left as a free parameter.
 
-[Hernquist 1990](http://adsabs.harvard.edu/abs/1990ApJ...356..359H)
-[Zhao 1996](http://adsabs.harvard.edu/abs/1996MNRAS.278..488Z)
+- [Hernquist 1990](http://adsabs.harvard.edu/abs/1990ApJ...356..359H)
+- [Zhao 1996](http://adsabs.harvard.edu/abs/1996MNRAS.278..488Z)
 
 * `rs`: scale radius in kpc
 * `rhos`: scale density in Msun / kpc3
