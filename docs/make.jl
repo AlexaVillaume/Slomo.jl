@@ -1,4 +1,5 @@
-push!(LOAD_PATH,"../src/")
+src_path = joinpath(splitdir(dirname(@__FILE__))[1], "src")
+push!(LOAD_PATH, src_path)
 
 using Documenter, Slomo
 
@@ -15,3 +16,8 @@ makedocs(
         "Private API" => "private_api.md"
     ]
 )
+
+deploydocs(
+    repo = "github.com/adwasser/Slomo.jl.git"
+)
+
