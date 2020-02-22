@@ -226,7 +226,7 @@ function CoreNFW_from_virial(Mvir, cvir, Re, t_sf;
     G_alt = 4.49850215e-06 # G in Msun^-1 kpc^3 Gyr^-2
     rs = nfw_halo.rs
     rhos = nfw_halo.rhos
-    rc = κ * Re * 4.0 / 3.0
+    rc = η * Re * 4.0 / 3.0
     t_dyn = 2π * sqrt(rs ^ 3 / (G_alt * M_NFW(rs, rs, rhos)))
     nc = tanh(κ * t_sf / t_dyn)
     return CoreNFWModel(rs, rhos, rc, nc)
