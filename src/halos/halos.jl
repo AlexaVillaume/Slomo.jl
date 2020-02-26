@@ -34,7 +34,8 @@ from Planck 2018 (h = 0.6766, Neff = 3.046, OmegaM = 0.3111).
 """
 module Halos
 
-using Roots: fzero
+using Roots
+using ForwardDiff
 
 using Slomo.Utils: log_gauss
 using Slomo.CosmologyTools: Ωm, ρm, ρcrit, default_cosmo

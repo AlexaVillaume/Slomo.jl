@@ -97,24 +97,24 @@ function rsol_from_Mvir(m22, Mvir)
 end
 
 """
-    matching_radius(rs, rhos, rsol, rhosol; <keyword arguments>)
+    matching_radius(ρ1, ρ2; <keyword arguments>)
 
-Compute the matching radius, repsilon, from the specified NFW and Sol parameters.
+Compute the matching radius from the specified density profiles.
 
 # Arguments
-- `xstart::Real = 2.0`: factor of the soliton radius to start the search for the root
-- `rtol::Real = 1e-9`: relative error tolerance for the root finding
+- `x_start::Real = 2.0`: factor of radius scale to start the search for the root
+- `radius_scale::Real = 1.0`: radius scale
 - `maxevals:Int = 100`: maximum number of function evalutions for the root finding
 """
-function matching_radius(rs, rhos, rsol, rhosol;
-                         xstart = 2.0, rtol = 1e-9, maxevals = 100)
-    ρ1(r) = rho_NFW(r, rs, rhos)
-    dρ1(r) = drhodr_NFW(r, rs, rhos)
-    ρ2(r) = rho_sol(r, rsol, rhosol)
-    dρ2(r) = drhodr_sol(r, rsol, rhosol)
-    f(r) = (1.0 - ρ1(r) / ρ2(r)) ^ 2
-    fp(r) = -2.0 * (1.0 - ρ1(r) / ρ2(r)) * (dρ1(r) / ρ2(r) - ρ1(r) * dρ2(r) / ρ2(r)^2)
-    return fzero(f, fp, xstart * rsol; rtol = rtol, maxevals = maxevals)
+function matching_radius(ρ1, ρ2;
+                         x_start = 2.0, radius_scale = 1.0, maxevals = 100)
+    f1(x) = ρ1(radius_scale * x)
+    f2(x) = ρ2(radius_scale * x)
+    y(x) = f1(x) / f2(x) - 1.0
+    yp(x) = ForwardDiff.derivative(y, float(x))
+    x0 = Roots.find_zero((y, yp), x_start, Roots.Newton(),
+                         maxevals = maxevals)
+    return radius_scale * x0
 end
 
 """
@@ -141,16 +141,18 @@ struct SolNFWModel <: HaloModel
     repsilon::Float64
     # enforce density matching
     SolNFWModel(rs, rhos, rsol, rhosol, repsilon;
-                rtol = 1e-9, maxevals = 100) = begin
+                x_start = 2.0, maxevals = 100) = begin
         ρnfw = rho_NFW(repsilon, rs, rhos)
         ρsol = rho_sol(repsilon, rsol, rhosol)
-        if ((ρnfw - ρsol) / ρsol) ^ 2 < 1e-9
+        if abs((ρnfw - ρsol) / ρsol) < 4 * eps()
             return new(rs, rhos, rsol, rhosol, repsilon)
         else
             @warn("recalculating matching radius", maxlog=1)
             try
-                repsilon = matching_radius(rs, rhos, rsol, rhosol;
-                                           rtol = rtol, maxevals = maxevals)
+                ρ1(r) = rho_NFW(r, rs, rhos)
+                ρ2(r) = rho_sol(r, rsol, rhosol)
+                repsilon = matching_radius(ρ1, ρ2; radius_scale = rsol,
+                                           x_start = x_start, maxevals = maxevals)
             catch err
                 @warn("failed to find matching radius for " *
                       "\trs = $rs \n\trhos = $rhos \n\trsol = $rsol \n\trhosol = $rhosol")
@@ -211,14 +213,13 @@ Construct a Solition-NFW halo from the halo mass, concentration, and axion mass.
 - `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
 - `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
 - `z::Real = 0.0`: redshift at which to evaluate the overdensity
-- `xstart::Real = 10.0`: factor of the scale radius to start the search for the root
-- `rtol::Real = 1e-2`: relative error tolerance for the root finding
+- `x_start::Real = 2.0`: factor of radius scale to start the search for the root
 - `maxevals:Int = 100`: maximum number of function evalutions for the root finding
 """
 function SolNFW_from_virial(Mvir, cvir, m22;
                             rsol = nothing,
                             mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
-                            rtol = 1e-9, maxevals=100)
+                            x_start = 2.0, maxevals = 100)
     # soliton parameters, calculate rsol from Mvir scaling if not passed in
     if rsol == nothing
         rsol = rsol_from_Mvir(m22, Mvir)
@@ -230,21 +231,9 @@ function SolNFW_from_virial(Mvir, cvir, m22;
 
     # first guess, rhos from normal NFW profile
     rhos = Mvir / M_NFW(Rvir, rs, 1.0)
-    repsilon = matching_radius(rs, rhos, rsol, rhosol;
-                               rtol = rtol, maxevals = maxevals)
-
-    return SolNFWModel(rs, rhos, rsol, rhosol, repsilon)
-end
-
-function matching_radius(rs, rhos, alpha, beta, gamma, rsol, rhosol;
-                         xstart = 2.0, rtol = 1e-6, maxevals = 100)
-    ρ1(r) = rho_ABG(r, rs, rhos, alpha, beta, gamma)
-    dρ1(r) = drhodr_ABG(r, rs, rhos, alpha, beta, gamma)
-    ρ2(r) = rho_sol(r, rsol, rhosol)
-    dρ2(r) = drhodr_sol(r, rsol, rhosol)
-    f(r) = (1.0 - ρ1(r) / ρ2(r)) ^ 2
-    fp(r) = -2.0 * (1.0 - ρ1(r) / ρ2(r)) * (dρ1(r) / ρ2(r) - ρ1(r) * dρ2(r) / ρ2(r)^2)
-    return fzero(f, fp, xstart * rsol; rtol = rtol, maxevals = 100)
+    repsilon = 2 * rsol
+    return SolNFWModel(rs, rhos, rsol, rhosol, repsilon;
+                       x_start = x_start, radius_scale = rsol, maxevals = maxevals)
 end
 
 """
@@ -274,17 +263,18 @@ struct SolABGModel <: HaloModel
     repsilon::Float64
     # enforce density matching
     SolABGModel(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon;
-                rtol = 1e-6, maxevals = 100) = begin
+                x_start = 2.0, maxevals = 100) = begin
         ρabg = rho_ABG(repsilon, rs, rhos, alpha, beta, gamma)
         ρsol = rho_sol(repsilon, rsol, rhosol)
-        if ((ρabg - ρsol) / ρsol) ^ 2 < rtol
+        if abs((ρabg - ρsol) / ρsol) < 4 * eps()
             return new(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon)
         else
             @warn("recalculating matching radius", maxlog=1)
             try
-                repsilon = matching_radius(rs, rhos, alpha, beta, gamma,
-                                           rsol, rhosol;
-                                           rtol = rtol, maxevals = maxevals)
+                ρ1(r) = rho_ABG(r, rs, rhos, alpha, beta, gamma)
+                ρ2(r) = rho_sol(r, rsol, rhosol)
+                repsilon = matching_radius(ρ1, ρ2; radius_scale = rsol,
+                                           x_start = x_start, maxevals = maxevals)
             catch err
                 @warn("failed to find matching radius for " *
                       "\trs = $rs \n\trhos = $rhos \n\trsol = $rsol \n\trhosol = $rhosol")
@@ -348,14 +338,13 @@ axion mass.
 - `mdef::AbstractString = default_mdef`: halo mass definition (e.g., "200c", "vir")
 - `cosmo::AbstractCosmology = default_cosmo`: cosmology under which to evaluate the overdensity
 - `z::Real = 0.0`: redshift at which to evaluate the overdensity
-- `xstart::Real = 10.0`: factor of the scale radius to start the search for the root
-- `rtol::Real = 1e-2`: relative error tolerance for the root finding
+- `x_start::Real = 2.0`: factor of radius scale to start the search for the root
 - `maxevals:Int = 100`: maximum number of function evalutions for the root finding
 """
 function SolABG_from_virial(Mvir, cvir, alpha, beta, gamma, m22;
                             rsol = nothing,
                             mdef = default_mdef, cosmo = default_cosmo, z = 0.0,
-                            rtol = 1e-9, maxevals=100)
+                            x_start = 2.0, maxevals = 100)
     # soliton parameters, calculate rsol from Mvir scaling if not passed in
     if rsol == nothing
         rsol = rsol_from_Mvir(m22, Mvir)
@@ -368,8 +357,7 @@ function SolABG_from_virial(Mvir, cvir, alpha, beta, gamma, m22;
 
     # first guess, rhos from normal ABG profile
     rhos = Mvir / M_ABG(Rvir, rs, 1.0, alpha, beta, gamma)
-    repsilon = matching_radius(rs, rhos, alpha, beta, gamma, rsol, rhosol;
-                               rtol = rtol, maxevals = maxevals)
-
-    return SolABGModel(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon)
+    repsilon = 2 * rsol
+    return SolABGModel(rs, rhos, alpha, beta, gamma, rsol, rhosol, repsilon;
+                       x_start = x_start, maxevals = maxevals)
 end
